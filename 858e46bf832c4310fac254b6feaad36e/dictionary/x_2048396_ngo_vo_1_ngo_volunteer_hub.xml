@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="88218bbf83a08310fac254b6feaad355" extends="task" label="NGO volunteer hub" max_length="40" name="x_2048396_ngo_vo_1_ngo_volunteer_hub" type="collection">
+        <element label="Age" max_length="40" name="age" type="integer"/>
+        <element label="Skills" max_length="400" name="skills" type="string"/>
+        <element label="Hours Contributed" max_length="40" name="hours_contributed" type="integer"/>
+        <element label="Email" max_length="40" name="email" type="string"/>
+        <element choice="3" label="Gender" max_length="40" name="gender" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Female" sequence="1" value="female"/>
+                <element inactive_on_update="false" label="Male" sequence="0" value="male"/>
+                <element inactive_on_update="false" label="Others" sequence="2" value="others"/>
+            </choice>
+        </element>
+        <element label="volunteer" max_length="32" name="volunteer" reference="x_2048396_ngo_vo_1_ngo_volunteer_hub" type="reference"/>
+        <element label="Phone Number" max_length="40" name="phone_number" type="phone_number_e164"/>
+        <element choice="1" label="Status" max_length="40" name="status" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Active" sequence="3" value="active"/>
+                <element inactive_on_update="false" label="Rejected" sequence="2" value="rejected"/>
+                <element inactive_on_update="false" label="Pending" sequence="0" value="pending"/>
+                <element inactive_on_update="false" label="Approved" sequence="1" value="approved"/>
+                <element inactive_on_update="false" label="Inactive" sequence="4" value="inactive"/>
+            </choice>
+        </element>
+        <element label="Full Name" max_length="40" name="full_name" type="string"/>
+        <element label="Address" max_length="100" name="address" type="string"/>
+        <element choice="1" label="Availability" max_length="40" name="availability" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Weekends" sequence="2" value="weekends"/>
+                <element inactive_on_update="false" label="Full Time" sequence="0" value="full_time"/>
+                <element inactive_on_update="false" label="Flexible" sequence="3" value="flexible"/>
+                <element inactive_on_update="false" label="Part Time" sequence="1" value="part_time"/>
+            </choice>
+        </element>
+        <element default="javascript:getNextObjNumberPadded();" dynamic_default_value="fdcb83a85f220100a9ad2572f2b4773c" label="Volunteer_ID" max_length="40" name="volunteer_id" type="string" use_dynamic_default="true"/>
+        <element choice="3" label="Status" max_length="40" name="statu0" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Applied" sequence="0" value="applied"/>
+                <element inactive_on_update="false" label="Rejected" sequence="2" value="rejected"/>
+                <element inactive_on_update="false" label="Approved" sequence="1" value="approved"/>
+            </choice>
+        </element>
+    </element>
+</database>
