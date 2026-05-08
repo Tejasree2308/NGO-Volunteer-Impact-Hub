@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="question_choice">
+    <question_choice action="INSERT_OR_UPDATE">
+        <inactive>false</inactive>
+        <order>100</order>
+        <published_ref/>
+        <question display_value="Availability">f73ff9c083b8c310fac254b6feaad32e</question>
+        <sys_class_name>question_choice</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-05-07 05:19:52</sys_created_on>
+        <sys_id>0640ca4483b8c310fac254b6feaad3ca</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Full time</sys_name>
+        <sys_package display_value="NGO volunteer Impact Hub" source="x_2048396_ngo_vo_1">858e46bf832c4310fac254b6feaad36e</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</sys_scope>
+        <sys_update_name>question_choice_0640ca4483b8c310fac254b6feaad3ca</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-05-07 05:19:52</sys_updated_on>
+        <text>Full time</text>
+        <value>full_time</value>
+    </question_choice>
+    <fx_price action="delete_multiple" query="id=0640ca4483b8c310fac254b6feaad3ca"/>
+</record_update>

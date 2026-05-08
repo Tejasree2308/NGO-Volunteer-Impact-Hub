@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sc_cat_item_category">
+    <sc_cat_item_category action="DELETE">
+        <sc_cat_item display_value="Apply for Opportunity">98893d448378c310fac254b6feaad31d</sc_cat_item>
+        <sc_category display_value="Can We Help You?">e15706fc0a0a0aa7007fc21e1ab70c2f</sc_category>
+        <sys_class_name>sc_cat_item_category</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-05-07 04:55:10</sys_created_on>
+        <sys_id>dcaab5088378c310fac254b6feaad33a</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Can We Help You?.Apply for Opportunity</sys_name>
+        <sys_package display_value="NGO volunteer Impact Hub" source="x_2048396_ngo_vo_1">858e46bf832c4310fac254b6feaad36e</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</sys_scope>
+        <sys_update_name>sc_cat_item_category_dcaab5088378c310fac254b6feaad33a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-05-07 04:55:10</sys_updated_on>
+    </sc_cat_item_category>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</application>
+        <file_path/>
+        <instance_id>6d437503ffb70258c80bf8e4fc4fd9d5</instance_id>
+        <instance_name>dev286774</instance_name>
+        <name>sc_cat_item_category_dcaab5088378c310fac254b6feaad33a</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update table="sc_cat_item_category"><sc_cat_item_category action="INSERT_OR_UPDATE"><sc_cat_item display_value="Apply for Opportunity">98893d448378c310fac254b6feaad31d</sc_cat_item><sc_category display_value="Can We Help You?">e15706fc0a0a0aa7007fc21e1ab70c2f</sc_category><sys_class_name>sc_cat_item_category</sys_class_name><sys_created_by>admin</sys_created_by><sys_created_on>2026-05-07 04:55:10</sys_created_on><sys_id>dcaab5088378c310fac254b6feaad33a</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Can We Help You?.Apply for Opportunity</sys_name><sys_package display_value="NGO volunteer Impact Hub" source="x_2048396_ngo_vo_1">858e46bf832c4310fac254b6feaad36e</sys_package><sys_policy/><sys_scope display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</sys_scope><sys_update_name>sc_cat_item_category_dcaab5088378c310fac254b6feaad33a</sys_update_name><sys_updated_by>admin</sys_updated_by><sys_updated_on>2026-05-07 04:55:10</sys_updated_on></sc_cat_item_category></record_update>]]></payload>
+        <payload_hash>1257251126</payload_hash>
+        <record_name>Can We Help You?.Apply for Opportunity</record_name>
+        <reverted_from/>
+        <source>858e46bf832c4310fac254b6feaad390</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-05-07 04:55:10</sys_created_on>
+        <sys_id>58aab5088378c310fac254b6feaad343</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19e00ca2c970000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-05-07 04:55:10</sys_updated_on>
+        <type>Catalog Item Category</type>
+        <update_guid>d0aab5081c78c310026fe9cd533c8a42</update_guid>
+        <update_guid_history>d0aab5081c78c310026fe9cd533c8a42:1257251126</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="Can We Help You?.Apply for Opportunity">663c390c8378c310fac254b6feaad318</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-05-07 05:02:09</sys_created_on>
+        <sys_db_object display_value="" name="sc_cat_item_category">sc_cat_item_category</sys_db_object>
+        <sys_id>1c57ac388e6e43fdbce0338db4a4ce29</sys_id>
+        <sys_metadata>dcaab5088378c310fac254b6feaad33a</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Can We Help You?.Apply for Opportunity</sys_name>
+        <sys_package display_value="NGO volunteer Impact Hub" source="x_2048396_ngo_vo_1">858e46bf832c4310fac254b6feaad36e</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</sys_scope>
+        <sys_scope_delete display_value="">50e4770b527b49f2a4c384c5d96e16b1</sys_scope_delete>
+        <sys_update_name>sc_cat_item_category_dcaab5088378c310fac254b6feaad33a</sys_update_name>
+        <sys_update_version display_value="sc_cat_item_category_dcaab5088378c310fac254b6feaad33a">58aab5088378c310fac254b6feaad343</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-05-07 05:02:09</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

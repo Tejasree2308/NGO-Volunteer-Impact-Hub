@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="76a3928c833cc310fac254b6feaad39c" label="Impact Report" max_length="40" name="x_2048396_ngo_vo_1_impact_report" type="collection">
+        <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
+        <element label="Total Hours" max_length="40" name="u_integer_3" type="integer"/>
+        <element attributes="edge_encryption_enabled=true" label="Outcome Summary" max_length="40" name="u_string_5" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Project" max_length="40" name="u_string_1" type="string"/>
+        <element label="Volunteers involved" max_length="40" name="u_integer_2" type="integer"/>
+        <element label="Beneficiaries Reached" max_length="40" name="u_integer_4" type="integer"/>
+    </element>
+</database>

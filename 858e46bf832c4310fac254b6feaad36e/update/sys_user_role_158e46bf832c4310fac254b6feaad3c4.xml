@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_user_role">
+    <sys_user_role action="INSERT_OR_UPDATE">
+        <assignable_by/>
+        <can_delegate>true</can_delegate>
+        <description>Admin</description>
+        <elevated_privilege>false</elevated_privilege>
+        <federated_id>Q+9DwrUpy/RY2la6TXBmfPIDw9ZIJzgc21B3GFmXysE=</federated_id>
+        <grantable>true</grantable>
+        <includes_roles/>
+        <name>x_2048396_ngo_vo_1.ngo_admin</name>
+        <scoped_admin>false</scoped_admin>
+        <suffix>ngo_admin</suffix>
+        <sys_class_name>sys_user_role</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-05-06 11:43:35</sys_created_on>
+        <sys_id>158e46bf832c4310fac254b6feaad3c4</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_2048396_ngo_vo_1.ngo_admin</sys_name>
+        <sys_package display_value="NGO volunteer Impact Hub" source="x_2048396_ngo_vo_1">858e46bf832c4310fac254b6feaad36e</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</sys_scope>
+        <sys_update_name>sys_user_role_158e46bf832c4310fac254b6feaad3c4</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-05-06 11:43:35</sys_updated_on>
+    </sys_user_role>
+</record_update>
