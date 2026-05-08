@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="ce2ec75083f08710fac254b6feaad377" extends="task" label="NGO Projects" max_length="40" name="x_2048396_ngo_vo_1_ngo_projects" type="collection"/>
+</database>
