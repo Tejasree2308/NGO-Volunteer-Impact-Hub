@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <!-- Teal figure (top) -->
+  <circle cx="200" cy="82" r="22" fill="#1AADA4"/>
+  <path d="M160 140 Q200 110 240 140 Q230 175 200 175 Q170 175 160 140Z" fill="#1AADA4"/>
+
+  <!-- Orange figure (left) -->
+  <circle cx="98" cy="190" r="22" fill="#F5922A"/>
+  <path d="M80 155 Q115 145 135 175 Q130 210 110 215 Q88 215 80 155Z" fill="#F5922A" transform="rotate(-30 110 185)"/>
+  <ellipse cx="102" cy="188" rx="35" ry="25" fill="#F5922A" transform="rotate(-45 102 188)"/>
+
+  <!-- Blue figure (right) -->
+  <circle cx="302" cy="190" r="22" fill="#2D6CC4"/>
+  <ellipse cx="298" cy="188" rx="35" ry="25" fill="#2D6CC4" transform="rotate(45 298 188)"/>
+
+  <!-- Green figure (bottom) -->
+  <circle cx="200" cy="295" r="22" fill="#4D8E3A"/>
+  <path d="M160 260 Q200 290 240 260 Q235 295 200 300 Q165 300 160 260Z" fill="#4D8E3A"/>
+
+  <!-- Center plant sprout -->
+  <circle cx="200" cy="205" r="18" fill="white"/>
+  <!-- Stem -->
+  <rect x="198" y="200" width="4" height="18" rx="2" fill="#4D8E3A"/>
+  <!-- Left leaf -->
+  <path d="M200 210 Q185 200 183 190 Q195 192 200 210Z" fill="#4D8E3A"/>
+  <!-- Right leaf -->
+  <path d="M200 207 Q215 197 217 187 Q205 189 200 207Z" fill="#4D8E3A"/>
+
+  <!-- Text: NGO -->
+  <line x1="115" y1="335" x2="155" y2="335" stroke="#1B2A4A" stroke-width="2"/>
+  <line x1="245" y1="335" x2="285" y2="335" stroke="#1B2A4A" stroke-width="2"/>
+  <text x="200" y="340" font-family="'Segoe UI', sans-serif" font-size="18" font-weight="600" fill="#1B2A4A" text-anchor="middle" letter-spacing="4">NGO</text>
+
+  <!-- Text: IMPACT -->
+  <text x="148" y="375" font-family="'Segoe UI', sans-serif" font-size="38" font-weight="800" fill="#1B2A4A" text-anchor="end" letter-spacing="-1">IMPACT</text>
+  <!-- Text: HUB -->
+  <text x="155" y="375" font-family="'Segoe UI', sans-serif" font-size="38" font-weight="800" fill="#4D8E3A" text-anchor="start" letter-spacing="-1"> HUB</text>
+
+  <!-- Tagline -->
+  <text x="200" y="398" font-family="'Segoe UI', sans-serif" font-size="10" fill="#555" text-anchor="middle" letter-spacing="3">COLLABORATE. EMPOWER. TRANSFORM.</text>
+</svg>
