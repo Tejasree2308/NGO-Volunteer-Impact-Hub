@@ -1,0 +1,25 @@
+{
+  "name": "login_page",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tejasree2308/NGO-Volunteer-Impact-Hub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Tejasree2308/NGO-Volunteer-Impact-Hub/issues"
+  },
+  "homepage": "https://github.com/Tejasree2308/NGO-Volunteer-Impact-Hub#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {}
+}
