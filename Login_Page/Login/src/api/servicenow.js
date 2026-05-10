@@ -71,12 +71,71 @@ async function snFetch(path, options = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AUTH
+// AUTHENTICATION SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Authenticate a user against ServiceNow.
- * Falls back to demo credentials if PDI is unreachable.
+ * Enhanced authentication system with JWT-like session management
+ */
+
+// In-memory session store (in production, use Redis/database)
+const sessions = new Map()
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
+
+/**
+ * Generate a session token
+ */
+function generateSessionToken() {
+  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+/**
+ * Validate session token
+ */
+function validateSessionToken(token) {
+  if (!token || !sessions.has(token)) return null
+
+  const session = sessions.get(token)
+  if (Date.now() - session.created > SESSION_TIMEOUT) {
+    sessions.delete(token)
+    return null
+  }
+
+  return session.user
+}
+
+/**
+ * Create a new session
+ */
+function createSession(user) {
+  const token = generateSessionToken()
+  const session = {
+    user,
+    created: Date.now(),
+    lastActivity: Date.now()
+  }
+  sessions.set(token, session)
+  return token
+}
+
+/**
+ * Destroy a session
+ */
+function destroySession(token) {
+  sessions.delete(token)
+}
+
+/**
+ * Update session activity
+ */
+function updateSessionActivity(token) {
+  if (sessions.has(token)) {
+    sessions.get(token).lastActivity = Date.now()
+  }
+}
+
+/**
+ * Enhanced authenticate user with session management
  */
 export async function authenticateUser(email, password) {
   const snUser = import.meta.env.VITE_SN_USERNAME || 'admin'
@@ -84,46 +143,95 @@ export async function authenticateUser(email, password) {
   const snInstance = import.meta.env.VITE_SN_INSTANCE || ''
 
   // ─── Accept real ServiceNow admin credentials ─────────────────────────────
-  // If user types the actual PDI username/password (from .env), log them in
   const isRealSNLogin =
     (email === snUser || email === `${snUser}@${snInstance.replace('https://','').split('.')[0]}.com`) &&
     password === snPass
 
   if (isRealSNLogin) {
-    // Verify by calling ServiceNow API
     try {
       const data = await snFetch(
         `/sys_user?sysparm_query=user_name=${snUser}&sysparm_fields=sys_id,name,email,user_name&sysparm_limit=1`
       )
       const users = data.result || []
       if (users.length > 0) {
-        return { sys_id: users[0].sys_id, name: users[0].name || 'Admin', email: users[0].email || email, user_name: snUser, connected: true }
+        const user = { sys_id: users[0].sys_id, name: users[0].name || 'Admin', email: users[0].email || email, user_name: snUser, role: 'admin', connected: true }
+        const token = createSession(user)
+        return { ...user, token }
       }
     } catch (e) {
       console.warn('SN verify failed:', e.message)
     }
     // Even if API fails, accept real credentials
-    return { sys_id: 'sn-admin', name: 'SN Admin', email, user_name: snUser, connected: true }
+    const user = { sys_id: 'sn-admin', name: 'SN Admin', email, user_name: snUser, role: 'admin', connected: true }
+    const token = createSession(user)
+    return { ...user, token }
   }
 
   // ─── Try ServiceNow email lookup ──────────────────────────────────────────
   try {
     const query = `email=${encodeURIComponent(email)}`
     const data = await snFetch(
-      `/sys_user?sysparm_query=${query}&sysparm_fields=sys_id,name,email,roles,user_name&sysparm_limit=1`
+      `/sys_user?sysparm_query=${query}&sysparm_fields=sys_id,name,email,roles,user_name,u_is_volunteer&sysparm_limit=1`
     )
     const users = data.result || []
-    if (users.length > 0) return users[0]
+    if (users.length > 0) {
+      const user = {
+        sys_id: users[0].sys_id,
+        name: users[0].name || 'User',
+        email: users[0].email,
+        user_name: users[0].user_name,
+        role: users[0].u_is_volunteer === 'true' ? 'volunteer' : 'admin',
+        connected: true
+      }
+      const token = createSession(user)
+      return { ...user, token }
+    }
   } catch (err) {
     console.warn('SN Auth failed:', err.message)
   }
 
   // ─── Demo fallback ────────────────────────────────────────────────────────
-  if (email === 'admin@ngo.org' && password === 'admin123') {
-    return { sys_id: 'demo-001', name: 'Admin User', email, user_name: 'admin' }
+  if (email === 'admin@ngo.org' && password === 'admin456') {
+    const user = { sys_id: 'demo-001', name: 'Admin User', email, user_name: 'admin', role: 'admin' }
+    const token = createSession(user)
+    return { ...user, token }
   }
 
-  throw new Error(`Invalid credentials.\n• Real PDI: use "${snUser}" / your PDI password\n• Demo: use "admin@ngo.org" / "admin123"`)
+  if (email === 'volunteer@ngo.org' && password === 'volunteer123') {
+    const user = { sys_id: 'demo-002', name: 'Volunteer User', email, user_name: 'volunteer', role: 'volunteer' }
+    const token = createSession(user)
+    return { ...user, token }
+  }
+
+  throw new Error(`Invalid credentials.\n• Real PDI: use "${snUser}" / your PDI password\n• Demo: use "admin@ngo.org" / "admin456" or "volunteer@ngo.org" / "volunteer123"`)
+}
+
+/**
+ * Validate current session
+ */
+export function validateSession(token) {
+  return validateSessionToken(token)
+}
+
+/**
+ * Logout user (destroy session)
+ */
+export function logout(token) {
+  destroySession(token)
+}
+
+/**
+ * Refresh session activity
+ */
+export function refreshSession(token) {
+  updateSessionActivity(token)
+}
+
+/**
+ * Get current user from session
+ */
+export function getCurrentUser(token) {
+  return validateSessionToken(token)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -329,6 +437,183 @@ export async function createImpactReport(payload) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// EVENTS & TASKS  → x_2048396_ngo_vo_1_events
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SN_TABLE_EVENTS = 'x_2048396_ngo_vo_1_events'
+
+function mapEvent(r) {
+  return {
+    sys_id:                  r.sys_id,
+    u_event_name:            r.event_name            || r.u_event_name            || '',
+    u_description:           r.description           || r.u_description           || '',
+    u_location:              r.location              || r.u_location              || '',
+    u_event_date:            r.event_date            || r.u_event_date            || '',
+    u_start_time:            r.start_time            || r.u_start_time            || '',
+    u_end_time:              r.end_time              || r.u_end_time              || '',
+    u_required_skills:       r.required_skills       || r.u_required_skills       || '',
+    u_max_participants:      r.max_participants      || r.u_max_participants      || '',
+    u_status:                r.status                || r.u_status                || 'open',
+    u_registered_count:      r.registered_count      || r.u_registered_count      || '0',
+  }
+}
+
+export async function getEvents() {
+  try {
+    const data = await snFetch(
+      `/${SN_TABLE_EVENTS}?sysparm_fields=sys_id,event_name,description,location,event_date,start_time,end_time,required_skills,max_participants,status,registered_count&sysparm_limit=50`
+    )
+    return (data.result || []).map(mapEvent)
+  } catch {
+    return DEMO_EVENTS
+  }
+}
+
+export async function createEvent(payload) {
+  try {
+    const snPayload = {
+      event_name:         payload.u_event_name,
+      description:        payload.u_description,
+      location:           payload.u_location,
+      event_date:         payload.u_event_date,
+      start_time:         payload.u_start_time,
+      end_time:           payload.u_end_time,
+      required_skills:    payload.u_required_skills,
+      max_participants:   payload.u_max_participants,
+      status:             payload.u_status,
+      registered_count:   '0',
+    }
+    const data = await snFetch(`/${SN_TABLE_EVENTS}`, {
+      method: 'POST',
+      body: JSON.stringify(snPayload),
+    })
+    return mapEvent(data.result)
+  } catch {
+    return { sys_id: `demo-event-${Date.now()}`, ...payload, u_registered_count: '0' }
+  }
+}
+
+export async function updateEvent(sysId, payload) {
+  try {
+    const snPayload = {
+      event_name:         payload.u_event_name,
+      description:        payload.u_description,
+      location:           payload.u_location,
+      event_date:         payload.u_event_date,
+      start_time:         payload.u_start_time,
+      end_time:           payload.u_end_time,
+      required_skills:    payload.u_required_skills,
+      max_participants:   payload.u_max_participants,
+      status:             payload.u_status,
+    }
+    const data = await snFetch(`/${SN_TABLE_EVENTS}/${sysId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(snPayload),
+    })
+    return mapEvent(data.result)
+  } catch {
+    return { sys_id: sysId, ...payload }
+  }
+}
+
+export async function deleteEvent(sysId) {
+  try {
+    await snFetch(`/${SN_TABLE_EVENTS}/${sysId}`, {
+      method: 'DELETE',
+    })
+    return true
+  } catch {
+    return true // Demo mode always succeeds
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT REGISTRATIONS  → x_2048396_ngo_vo_1_event_registrations
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SN_TABLE_REGISTRATIONS = 'x_2048396_ngo_vo_1_event_registrations'
+
+function mapRegistration(r) {
+  return {
+    sys_id:              r.sys_id,
+    u_volunteer:         r.volunteer         || r.u_volunteer         || '',
+    u_event:             r.event             || r.u_event             || '',
+    u_registration_date: r.registration_date || r.u_registration_date || '',
+    u_status:            r.status            || r.u_status            || 'registered',
+  }
+}
+
+export async function getEventRegistrations(volunteerSysId = null) {
+  try {
+    let query = ''
+    if (volunteerSysId) {
+      query = `?sysparm_query=volunteer=${volunteerSysId}`
+    }
+    const data = await snFetch(
+      `/${SN_TABLE_REGISTRATIONS}${query}&sysparm_fields=sys_id,volunteer,event,registration_date,status&sysparm_limit=100`
+    )
+    return (data.result || []).map(mapRegistration)
+  } catch {
+    return DEMO_REGISTRATIONS.filter(r => !volunteerSysId || r.u_volunteer === volunteerSysId)
+  }
+}
+
+export async function registerForEvent(volunteerSysId, eventSysId) {
+  try {
+    const snPayload = {
+      volunteer:         volunteerSysId,
+      event:             eventSysId,
+      registration_date: new Date().toISOString().split('T')[0],
+      status:            'registered',
+    }
+    const data = await snFetch(`/${SN_TABLE_REGISTRATIONS}`, {
+      method: 'POST',
+      body: JSON.stringify(snPayload),
+    })
+    return mapRegistration(data.result)
+  } catch {
+    return { sys_id: `demo-reg-${Date.now()}`, u_volunteer: volunteerSysId, u_event: eventSysId, u_registration_date: new Date().toISOString().split('T')[0], u_status: 'registered' }
+  }
+}
+
+export async function unregisterFromEvent(registrationSysId) {
+  try {
+    await snFetch(`/${SN_TABLE_REGISTRATIONS}/${registrationSysId}`, {
+      method: 'DELETE',
+    })
+    return true
+  } catch {
+    return true // Demo mode always succeeds
+  }
+}
+
+export async function getAvailableEvents(volunteerSysId) {
+  try {
+    const [allEvents, userRegistrations] = await Promise.all([
+      getEvents(),
+      getEventRegistrations(volunteerSysId)
+    ])
+
+    const registeredEventIds = userRegistrations.map(r => r.u_event)
+
+    return allEvents.filter(event =>
+      event.u_status === 'open' &&
+      !registeredEventIds.includes(event.sys_id) &&
+      (!event.u_max_participants || parseInt(event.u_registered_count) < parseInt(event.u_max_participants))
+    )
+  } catch {
+    const userRegistrations = DEMO_REGISTRATIONS.filter(r => r.u_volunteer === volunteerSysId)
+    const registeredEventIds = userRegistrations.map(r => r.u_event)
+
+    return DEMO_EVENTS.filter(event =>
+      event.u_status === 'open' &&
+      !registeredEventIds.includes(event.sys_id) &&
+      (!event.u_max_participants || parseInt(event.u_registered_count) < parseInt(event.u_max_participants))
+    )
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // DASHBOARD STATS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -404,4 +689,80 @@ export const DEMO_REPORTS = [
   { sys_id: 'r1', u_project: 'Women Empowerment Workshop', u_volunteers_involved: '8', u_total_hours: '320', u_beneficiaries_reached: '450', u_outcome_summary: 'Successfully trained 450 women in vocational skills and provided counseling support.' },
   { sys_id: 'r2', u_project: 'Digital Literacy Drive', u_volunteers_involved: '10', u_total_hours: '240', u_beneficiaries_reached: '180', u_outcome_summary: 'Ongoing program teaching basic computer and internet skills to rural youth.' },
   { sys_id: 'r3', u_project: 'Green Earth Campaign', u_volunteers_involved: '20', u_total_hours: '160', u_beneficiaries_reached: '1200', u_outcome_summary: 'Planted 500 trees across 12 locations, reached 1200 community members with awareness.' },
+]
+
+export const DEMO_EVENTS = [
+  {
+    sys_id: 'e1',
+    u_event_name: 'Community Clean-up Drive',
+    u_description: 'Join us for a day of cleaning up our local parks and streets. Help make our community cleaner and greener!',
+    u_location: 'Central Park, Downtown',
+    u_event_date: '2025-06-15',
+    u_start_time: '09:00',
+    u_end_time: '13:00',
+    u_required_skills: 'Physical work, Team coordination',
+    u_max_participants: '25',
+    u_status: 'open',
+    u_registered_count: '8'
+  },
+  {
+    sys_id: 'e2',
+    u_event_name: 'Food Bank Distribution',
+    u_description: 'Help distribute food packages to families in need. Volunteers needed for packing, loading, and distribution.',
+    u_location: 'Community Center, West Side',
+    u_event_date: '2025-06-20',
+    u_start_time: '10:00',
+    u_end_time: '15:00',
+    u_required_skills: 'Organization, Physical work',
+    u_max_participants: '15',
+    u_status: 'open',
+    u_registered_count: '12'
+  },
+  {
+    sys_id: 'e3',
+    u_event_name: 'Youth Mentorship Workshop',
+    u_description: 'Mentor high school students on career development and life skills. Share your experience and make a difference.',
+    u_location: 'City Library, Main Branch',
+    u_event_date: '2025-06-25',
+    u_start_time: '14:00',
+    u_end_time: '17:00',
+    u_required_skills: 'Teaching, Counseling, Communication',
+    u_max_participants: '10',
+    u_status: 'open',
+    u_registered_count: '5'
+  },
+  {
+    sys_id: 'e4',
+    u_event_name: 'Senior Citizen Tech Support',
+    u_description: 'Help elderly community members learn to use smartphones and computers. Patience and clear communication required.',
+    u_location: 'Senior Center, East District',
+    u_event_date: '2025-07-02',
+    u_start_time: '13:00',
+    u_end_time: '16:00',
+    u_required_skills: 'IT Support, Teaching, Patience',
+    u_max_participants: '8',
+    u_status: 'open',
+    u_registered_count: '3'
+  },
+  {
+    sys_id: 'e5',
+    u_event_name: 'Beach Cleanup Event',
+    u_description: 'Remove litter and debris from our beautiful coastline. Protect marine life and keep our beaches clean.',
+    u_location: 'Sunset Beach, Coastal Area',
+    u_event_date: '2025-07-10',
+    u_start_time: '08:00',
+    u_end_time: '12:00',
+    u_required_skills: 'Physical work, Environmental awareness',
+    u_max_participants: '30',
+    u_status: 'open',
+    u_registered_count: '18'
+  }
+]
+
+export const DEMO_REGISTRATIONS = [
+  { sys_id: 'reg1', u_volunteer: 'demo-002', u_event: 'e1', u_registration_date: '2025-06-01', u_status: 'registered' },
+  { sys_id: 'reg2', u_volunteer: 'demo-002', u_event: 'e2', u_registration_date: '2025-06-05', u_status: 'registered' },
+  { sys_id: 'reg3', u_volunteer: 'v1', u_event: 'e3', u_registration_date: '2025-06-08', u_status: 'registered' },
+  { sys_id: 'reg4', u_volunteer: 'v2', u_event: 'e4', u_registration_date: '2025-06-10', u_status: 'registered' },
+  { sys_id: 'reg5', u_volunteer: 'v3', u_event: 'e5', u_registration_date: '2025-06-12', u_status: 'registered' },
 ]

@@ -6,10 +6,11 @@ const NAV_ITEMS = [
   { id: 'volunteers',  label: 'Volunteers',   icon: <IconUsers /> },
   { id: 'projects',    label: 'Projects',     icon: <IconBriefcase /> },
   { id: 'assignments', label: 'Assignments',  icon: <IconLink /> },
+  { id: 'events',      label: 'Events',       icon: <IconCalendar /> },
   { id: 'reports',     label: 'Impact Reports', icon: <IconChart /> },
 ]
 
-export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
+export default function Sidebar({ activePage, onNavigate, onLogout, user, isAdmin }) {
   return (
     <aside className="sidebar">
       {/* Brand */}
@@ -40,14 +41,14 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
           <div className="user-avatar">{(user.name || 'A')[0].toUpperCase()}</div>
           <div className="user-info">
             <span className="user-name">{user.name || 'Admin'}</span>
-            <span className="user-role">Coordinator</span>
+            <span className="user-role">{user.role === 'admin' ? 'Coordinator' : 'Volunteer'}</span>
           </div>
         </div>
       )}
 
       {/* Nav */}
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {NAV_ITEMS.map(item => (
+        {NAV_ITEMS.filter(item => item.id === 'dashboard' || item.id === 'volunteers' || isAdmin).map(item => (
           <button
             key={item.id}
             className={`nav-item${activePage === item.id ? ' active' : ''}`}
@@ -110,6 +111,16 @@ function IconLink() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+  )
+}
+function IconCalendar() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   )
 }

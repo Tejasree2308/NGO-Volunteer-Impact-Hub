@@ -3,9 +3,11 @@ import logoImg from './assets/image.png'
 import { authenticateUser } from './api/servicenow'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
+import VolunteerDashboard from './pages/VolunteerDashboard'
 import VolunteersPage from './pages/VolunteersPage'
 import ProjectsPage from './pages/ProjectsPage'
 import AssignmentsPage from './pages/AssignmentsPage'
+import EventsPage from './pages/EventsPage'
 import ReportsPage from './pages/ReportsPage'
 import './App.css'
 
@@ -60,6 +62,8 @@ const validatePassword = v => v.length >= 6
 function LoginPage({ onLogin }) {
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
+  const [role,     setRole]     = useState('admin')
+  const [roleAnim, setRoleAnim] = useState(false)
   const [showPwd,  setShowPwd]  = useState(false)
   const [remember, setRemember] = useState(false)
   const [loading,  setLoading]  = useState(false)
@@ -78,6 +82,12 @@ function LoginPage({ onLogin }) {
     }, 3200)
   }
 
+  useEffect(() => {
+    if (!roleAnim) return
+    const timer = setTimeout(() => setRoleAnim(false), 450)
+    return () => clearTimeout(timer)
+  }, [roleAnim])
+
   function validate() {
     const e = {}
     if (!email.trim())                    e.email    = 'Username or email is required.'
@@ -95,9 +105,10 @@ function LoginPage({ onLogin }) {
     setLoading(true)
     try {
       const user = await authenticateUser(email, password)
-      if (remember) localStorage.setItem('ngo_session', JSON.stringify({ email, name: user.name }))
-      showToast('success', `Welcome back, ${user.name || 'Admin'}!`)
-      setTimeout(() => onLogin(user), 1000)
+      const authUser = { ...user, role }
+      if (remember) localStorage.setItem('ngo_session', JSON.stringify({ email, name: authUser.name, role: authUser.role }))
+      showToast('success', `Welcome back, ${authUser.name || 'Admin'}!`)
+      setTimeout(() => onLogin(authUser), 1000)
     } catch (err) {
       showToast('error', err.message || 'Login failed. Please check credentials.')
     } finally {
@@ -116,7 +127,7 @@ function LoginPage({ onLogin }) {
       </div>
 
       <main className="login-wrapper">
-        <div className="login-card" role="main">
+        <div className={`login-card${roleAnim ? ' role-switched' : ''}`} role="main">
           {/* Logo */}
           <div className="login-logo">
             <img src={logoImg} alt="NGO Impact Hub" className="logo-img"/>
@@ -125,7 +136,20 @@ function LoginPage({ onLogin }) {
           {/* Heading */}
           <div className="login-heading">
             <h1>NGO <span>Impact Hub</span></h1>
-            <p>Sign in to access your volunteer dashboard</p>
+            <p>Sign in to access your {role === 'admin' ? 'admin portal' : 'volunteer dashboard'}</p>
+          </div>
+
+          <div className="login-role-switcher" role="tablist" aria-label="Login user role">
+            <button type="button"
+              className={`role-btn${role === 'admin' ? ' active' : ''}`}
+              onClick={() => { if (role !== 'admin') { setRole('admin'); setRoleAnim(true) } }}
+              aria-selected={role === 'admin'}
+            >Admin</button>
+            <button type="button"
+              className={`role-btn${role === 'volunteer' ? ' active' : ''}`}
+              onClick={() => { if (role !== 'volunteer') { setRole('volunteer'); setRoleAnim(true) } }}
+              aria-selected={role === 'volunteer'}
+            >Volunteer</button>
           </div>
 
           {/* ServiceNow connection banner */}
@@ -143,7 +167,7 @@ function LoginPage({ onLogin }) {
                 <span className="field-icon"><IconMail/></span>
                 <input id="email-input" type="text"
                   className={`field-input${errors.email ? ' error' : ''}`}
-                  placeholder="admin  or  admin@ngo.org"
+                  placeholder={role === 'admin' ? 'admin or admin@ngo.org' : 'volunteer@ngo.org'}
                   value={email}
                   onChange={e => { setEmail(e.target.value); setErrors(p => ({...p, email: ''})) }}
                   autoComplete="username"
@@ -195,13 +219,13 @@ function LoginPage({ onLogin }) {
             <button id="login-submit-btn" type="submit" className="btn-submit"
               disabled={loading} aria-busy={loading}>
               {loading && <span className="spinner" aria-hidden="true"/>}
-              {loading ? 'Authenticating with ServiceNow…' : 'Sign In to Portal'}
+              {loading ? 'Authenticating with ServiceNow…' : `Sign In as ${role === 'admin' ? 'Admin' : 'Volunteer'}`}
             </button>
           </form>
 
           {/* Demo hint */}
           <div className="demo-hint">
-            <span>🧪 Demo mode:</span> Use <strong>admin@ngo.org</strong> / <strong>admin123</strong>
+            <span>🧪 Demo mode:</span> Use <strong>{role === 'admin' ? 'admin@ngo.org' : 'volunteer@ngo.org'}</strong> / <strong>{role === 'admin' ? 'admin456' : 'volunteer123'}</strong>
           </div>
 
           {/* Footer tagline */}
@@ -233,12 +257,17 @@ function LoginPage({ onLogin }) {
 function Portal({ user, onLogout }) {
   const [page, setPage] = useState('dashboard')
 
+  const isAdmin = user.role === 'admin'
+
   const pages = {
-    dashboard:   <Dashboard />,
-    volunteers:  <VolunteersPage />,
-    projects:    <ProjectsPage />,
-    assignments: <AssignmentsPage />,
-    reports:     <ReportsPage />,
+    dashboard: isAdmin ? <Dashboard /> : <VolunteerDashboard user={user} />,
+    volunteers: <VolunteersPage />,
+    ...(isAdmin ? {
+      projects:    <ProjectsPage />,
+      assignments: <AssignmentsPage />,
+      events:      <EventsPage />,
+      reports:     <ReportsPage />,
+    } : {}),
   }
 
   return (
@@ -248,9 +277,10 @@ function Portal({ user, onLogout }) {
         onNavigate={setPage}
         onLogout={onLogout}
         user={user}
+        isAdmin={isAdmin}
       />
       <main className="portal-content">
-        {pages[page] || <Dashboard />}
+        {pages[page] || (isAdmin ? <Dashboard /> : <VolunteerDashboard user={user} />)}
       </main>
     </div>
   )
