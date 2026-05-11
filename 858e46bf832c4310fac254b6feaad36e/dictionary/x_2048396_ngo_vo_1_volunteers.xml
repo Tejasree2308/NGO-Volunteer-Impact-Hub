@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="19e297dd833c4310fac254b6feaad350" label="Volunteer" max_length="40" name="x_2048396_ngo_vo_1_volunteers" type="collection">
+        <element label="Skills" max_length="500" name="u_skills" type="string"/>
+        <element label="Approval Status" max_length="20" name="u_approval_status" type="string"/>
+        <element label="Email" max_length="200" name="u_email" type="string"/>
+        <element label="Phone" max_length="20" name="u_phone" type="string"/>
+        <element label="Sys User ID" max_length="40" name="u_sys_user_id" type="string"/>
+        <element label="Name" max_length="100" name="u_name" type="string"/>
+        <element label="Is Active" max_length="40" name="u_is_active" type="boolean"/>
+        <element label="Address" max_length="300" name="u_address" type="string"/>
+        <element label="Availability" max_length="50" name="u_availability" type="string"/>
+    </element>
+</database>
