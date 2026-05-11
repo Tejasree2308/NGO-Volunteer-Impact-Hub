@@ -4,6 +4,7 @@
   "framework": "vite",
   "installCommand": "npm install",
   "rewrites": [
-    { "source": "/api/now/:path*", "destination": "/api/now/:path*" }
+    { "source": "/api/now/:snpath*", "destination": "/api/proxy?snpath=:snpath*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

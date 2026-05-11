@@ -2,6 +2,31 @@
    DASHBOARD PAGE STYLES
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ─── Volunteer Registration Form ───────────────────────────────────────── */
+.reg-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+.reg-field { display: flex; flex-direction: column; gap: 6px; }
+.reg-label { font-size: 13px; font-weight: 600; color: #374151; }
+.reg-input {
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color .15s;
+}
+.reg-input:focus { border-color: #10b981; background: #fff; }
+.reg-input-err  { border-color: #ef4444 !important; }
+.reg-err { font-size: 12px; color: #ef4444; }
+@media (max-width: 640px) { .reg-form-grid { grid-template-columns: 1fr; } }
+
 /* ─── Volunteer Dashboard Skeletons ─────────────────────────────────────── */
 .skel {
   background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);

@@ -17,8 +17,12 @@ export default function VolunteerDashboard({ user }) {
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({ name: user.name || '', email: user.email || '', mobile_phone: '', u_skills: '', u_availability: 'weekends', u_address: '' })
   const [errors, setErrors] = useState({})
-  const [hoursEdits, setHoursEdits] = useState({}) // { [sys_id]: hoursValue }
-  const [savingHours, setSavingHours] = useState({}) // { [sys_id]: bool }
+  const [hoursEdits, setHoursEdits] = useState({})
+  const [savingHours, setSavingHours] = useState({})
+  const [regForm, setRegForm] = useState({ name: '', mobile_phone: '', u_skills: '', u_availability: 'weekends', u_address: '' })
+  const [regErrors, setRegErrors] = useState({})
+  const [regSaving, setRegSaving] = useState(false)
+  const [regDone, setRegDone] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -104,6 +108,32 @@ export default function VolunteerDashboard({ user }) {
       showToast('error', err.message || 'Failed to log hours')
     } finally {
       setSavingHours(prev => ({ ...prev, [assignmentSysId]: false }))
+    }
+  }
+
+  function validateReg() {
+    const e = {}
+    if (!regForm.name.trim())         e.name         = 'Name is required'
+    if (!regForm.mobile_phone.trim()) e.mobile_phone = 'Phone is required'
+    else if (!/^\d{10}$/.test(regForm.mobile_phone.trim())) e.mobile_phone = 'Must be 10 digits'
+    if (!regForm.u_skills.trim())     e.u_skills     = 'At least one skill required'
+    return e
+  }
+
+  async function handleRegister() {
+    const errs = validateReg()
+    if (Object.keys(errs).length) { setRegErrors(errs); return }
+    setRegSaving(true)
+    try {
+      const myRecord = volunteers.find(v => v.email === user.email)
+      if (!myRecord) throw new Error('Volunteer record not found.')
+      await updateVolunteer(myRecord.sys_id, { ...regForm, email: user.email })
+      setRegDone(true)
+      showToast('success', 'Registration details saved!')
+    } catch (err) {
+      showToast('error', err.message || 'Failed to save details')
+    } finally {
+      setRegSaving(false)
     }
   }
 
@@ -244,6 +274,87 @@ export default function VolunteerDashboard({ user }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Volunteer Registration Form */}
+      <div className="content-card" style={{ marginTop: 24 }}>
+        <div className="card-header">
+          <h3>Volunteer Registration</h3>
+          <p>Fill in your details to complete your volunteer profile</p>
+        </div>
+
+        {regDone ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px 0', color: '#059669' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 28, height: 28, flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/>
+            </svg>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1rem' }}>Details saved successfully!</div>
+              <button style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: 0, fontSize: '0.85rem', textDecoration: 'underline', marginTop: 4 }}
+                onClick={() => setRegDone(false)}>Update again</button>
+            </div>
+          </div>
+        ) : (
+          <div className="reg-form-grid">
+            {/* Full Name */}
+            <div className="reg-field">
+              <label className="reg-label">Full Name <span style={{ color: '#ef4444' }}>*</span></label>
+              <input className={`reg-input${regErrors.name ? ' reg-input-err' : ''}`}
+                type="text" placeholder="e.g. Priya Sharma" value={regForm.name}
+                onChange={e => { setRegForm(f => ({ ...f, name: e.target.value })); setRegErrors(f => ({ ...f, name: '' })) }} />
+              {regErrors.name && <span className="reg-err">{regErrors.name}</span>}
+            </div>
+
+            {/* Phone */}
+            <div className="reg-field">
+              <label className="reg-label">Phone Number <span style={{ color: '#ef4444' }}>*</span></label>
+              <input className={`reg-input${regErrors.mobile_phone ? ' reg-input-err' : ''}`}
+                type="text" placeholder="10-digit number" value={regForm.mobile_phone}
+                onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 10); setRegForm(f => ({ ...f, mobile_phone: v })); setRegErrors(f => ({ ...f, mobile_phone: '' })) }} />
+              {regErrors.mobile_phone && <span className="reg-err">{regErrors.mobile_phone}</span>}
+            </div>
+
+            {/* Skills */}
+            <div className="reg-field" style={{ gridColumn: '1 / -1' }}>
+              <label className="reg-label">Skills <span style={{ color: '#ef4444' }}>*</span></label>
+              <input className={`reg-input${regErrors.u_skills ? ' reg-input-err' : ''}`}
+                placeholder="e.g. Teaching, First Aid" value={regForm.u_skills}
+                onChange={e => { setRegForm(f => ({ ...f, u_skills: e.target.value })); setRegErrors(f => ({ ...f, u_skills: '' })) }} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {SKILLS_OPTIONS.map(s => (
+                  <button key={s} type="button"
+                    onClick={() => setRegForm(f => ({ ...f, u_skills: f.u_skills ? `${f.u_skills}, ${s}` : s }))}
+                    style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#f8fafc', fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit', color: '#374151' }}>
+                    + {s}
+                  </button>
+                ))}
+              </div>
+              {regErrors.u_skills && <span className="reg-err">{regErrors.u_skills}</span>}
+            </div>
+
+            {/* Availability */}
+            <div className="reg-field">
+              <label className="reg-label">Availability</label>
+              <select className="reg-input" value={regForm.u_availability}
+                onChange={e => setRegForm(f => ({ ...f, u_availability: e.target.value }))}>
+                {AVAIL_OPTIONS.map(a => <option key={a} value={a}>{a.charAt(0).toUpperCase() + a.slice(1)}</option>)}
+              </select>
+            </div>
+
+            {/* Address */}
+            <div className="reg-field">
+              <label className="reg-label">Address</label>
+              <input className="reg-input" type="text" placeholder="City, State"
+                value={regForm.u_address} onChange={e => setRegForm(f => ({ ...f, u_address: e.target.value }))} />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+              <button className="btn-primary" onClick={handleRegister} disabled={regSaving}>
+                {regSaving ? <><span className="btn-spinner"/> Saving…</> : '✓ Save Registration Details'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* My Assignments and Projects */}
