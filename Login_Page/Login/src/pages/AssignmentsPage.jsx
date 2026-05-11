@@ -68,8 +68,11 @@ export default function AssignmentsPage() {
 
   function validate() {
     const e = {}
+    const today = new Date().toISOString().split('T')[0]
     if (!form.u_volunteer) e.u_volunteer = 'Select a volunteer'
     if (!form.u_project)   e.u_project   = 'Select a project'
+    if (form.u_assigned_date && form.u_assigned_date < today)
+      e.u_assigned_date = 'Assigned date cannot be in the past'
     return e
   }
 
@@ -83,11 +86,17 @@ export default function AssignmentsPage() {
         setAssignments(prev => prev.map(a =>
           a.sys_id === editingAssignment.sys_id ? { ...result, ...form, sys_id: editingAssignment.sys_id } : a
         ))
-        showToast('success', `Assignment updated: ${volMap[form.u_volunteer] || form.u_volunteer}`)
+        showToast('success', `Assignment updated successfully`)
       } else {
-        const result = await createAssignment(form)
-        setAssignments(prev => [{ ...result, ...form }, ...prev])
-        showToast('success', `Assignment created: ${volMap[form.u_volunteer] || form.u_volunteer} → ${projMap[form.u_project] || form.u_project}`)
+        const selectedVol = volunteers.find(v => v.sys_id === form.u_volunteer)
+        const payload = {
+          ...form,
+          u_volunteer_sys_user_id: selectedVol?.u_sys_user_id || '',
+          u_project_name:          projMap[form.u_project] || '',
+        }
+        const result = await createAssignment(payload)
+        setAssignments(prev => [{ ...result, ...form, u_volunteer_name: volMap[form.u_volunteer] || '', u_project_name: projMap[form.u_project] || '' }, ...prev])
+        showToast('success', `Assignment created: ${volMap[form.u_volunteer] || 'Volunteer'} → ${projMap[form.u_project] || 'Project'}`)
       }
       setModalOpen(false)
       setForm(EMPTY_FORM)
@@ -163,11 +172,11 @@ export default function AssignmentsPage() {
                 <tr key={a.sys_id} className="table-row">
                   <td>
                     <div className="vol-cell">
-                      <div className="vol-avatar">{(volMap[a.u_volunteer] || a.u_volunteer || 'V')[0]}</div>
-                      <span className="vol-name">{volMap[a.u_volunteer] || a.u_volunteer || '—'}</span>
+                      <div className="vol-avatar">{(a.u_volunteer_name || volMap[a.u_volunteer] || a.u_volunteer || 'V')[0]}</div>
+                      <span className="vol-name">{a.u_volunteer_name || volMap[a.u_volunteer] || a.u_volunteer || '—'}</span>
                     </div>
                   </td>
-                  <td><span className="proj-ref">{projMap[a.u_project] || a.u_project || '—'}</span></td>
+                  <td><span className="proj-ref">{a.u_project_name || projMap[a.u_project] || a.u_project || '—'}</span></td>
                   <td><span className="date-cell">{a.u_assigned_date || '—'}</span></td>
                   <td>
                     <div className="hours-bar-wrap">
@@ -235,8 +244,11 @@ export default function AssignmentsPage() {
           </div>
           <div className="form-field">
             <label className="form-label">Assigned Date</label>
-            <input type="date" className="form-input" value={form.u_assigned_date}
-              onChange={e => setForm(p => ({ ...p, u_assigned_date: e.target.value }))}/>
+            <input type="date" className={`form-input${errors.u_assigned_date ? ' input-error' : ''}`}
+              value={form.u_assigned_date}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => { setForm(p => ({ ...p, u_assigned_date: e.target.value })); setErrors(p => ({ ...p, u_assigned_date: '' })) }}/>
+            {errors.u_assigned_date && <span className="field-error">{errors.u_assigned_date}</span>}
           </div>
           <div className="form-field">
             <label className="form-label">Hours Worked</label>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>NGO Volunteer Impact Hub — Project Overview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:36px 48px;line-height:1.65}
+  /* Cover */
+  .cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;background:linear-gradient(135deg,#10b981,#059669);border-radius:18px;color:#fff;text-align:center;padding:40px;margin-bottom:36px}
+  .cover h1{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+  .cover p{font-size:13px;opacity:.88}
+  .cover .badge{margin-top:16px;background:rgba(255,255,255,.2);border-radius:99px;padding:5px 18px;font-size:11px;font-weight:600}
+  /* Section headings */
+  h2{font-size:16px;font-weight:800;color:#0f172a;margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid #10b981;display:flex;align-items:center;gap:8px}
+  h3{font-size:13px;font-weight:700;color:#0f172a;margin:16px 0 6px}
+  p{margin-bottom:8px;color:#374151}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
+  th{background:#f0fdf4;color:#065f46;font-weight:700;padding:8px 12px;text-align:left;border:1px solid #d1fae5}
+  td{padding:7px 12px;border:1px solid #e2e8f0;color:#374151;vertical-align:top}
+  tr:nth-child(even) td{background:#f8fafc}
+  /* Code / table names */
+  code{font-family:monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11px;color:#0f172a}
+  /* Cards grid */
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#f8fafc}
+  .card-title{font-weight:700;font-size:12px;color:#0f172a;margin-bottom:6px}
+  .card p{font-size:11.5px;color:#64748b;margin:0}
+  /* Flow boxes */
+  .flow{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px;font-family:monospace;font-size:11.5px;color:#065f46;white-space:pre-line;line-height:1.8}
+  /* BR table */
+  .br-tag{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:99px;padding:2px 10px;font-size:10px;font-weight:700}
+  /* Credentials */
+  .cred{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+  .cred-box{flex:1;min-width:180px;border-radius:12px;padding:14px;border:1px solid}
+  .cred-box.admin{background:#eff6ff;border-color:#bfdbfe}
+  .cred-box.vol{background:#f0fdf4;border-color:#bbf7d0}
+  .cred-box .role{font-weight:700;font-size:12px;margin-bottom:6px}
+  .cred-box .row{font-size:11.5px;color:#374151;margin-top:3px}
+  .cred-box .row span{font-weight:600}
+  /* URL badge */
+  .url-badge{display:inline-block;background:#0f172a;color:#fff;border-radius:8px;padding:6px 16px;font-size:12px;font-family:monospace;margin:6px 0 14px}
+  /* Architecture */
+  .arch{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:16px;font-family:monospace;font-size:11.5px;line-height:2;margin-bottom:14px}
+  .arch .green{color:#10b981}
+  .arch .gray{color:#64748b}
+  /* page break */
+  .pb{page-break-before:always;margin-top:0;padding-top:8px}
+  /* pill */
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700;margin-right:4px;margin-bottom:4px}
+  .pill-green{background:#d1fae5;color:#065f46}
+  .pill-blue{background:#dbeafe;color:#1d4ed8}
+  .pill-purple{background:#ede9fe;color:#6d28d9}
+  .pill-gold{background:#fef9c3;color:#854d0e}
+  /* footer */
+  .footer{margin-top:36px;border-top:1px solid #e2e8f0;padding-top:14px;font-size:11px;color:#94a3b8;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <h1>NGO Volunteer Impact Hub</h1>
+  <p>A full-stack ServiceNow-powered volunteer management platform</p>
+  <div class="badge">Project Overview &nbsp;|&nbsp; 2025</div>
+</div>
+
+<!-- 1. TECH STACK -->
+<h2>1. Technology Stack</h2>
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Frontend</td><td>React 19 + Vite</td><td>Single-page application UI</td></tr>
+  <tr><td>Backend / Database</td><td>ServiceNow PDI</td><td>Tables, Business Rules, REST API</td></tr>
+  <tr><td>Production Hosting</td><td>Vercel</td><td>Static site + serverless proxy function</td></tr>
+  <tr><td>API Layer</td><td>ServiceNow Table API</td><td>CRUD operations on all 7 tables</td></tr>
+  <tr><td>Dev Proxy</td><td>Vite Dev Server</td><td>Forwards /api/now/* to ServiceNow in development</td></tr>
+  <tr><td>Prod Proxy</td><td>Vercel Serverless (api/proxy.js)</td><td>Injects Basic Auth, forwards to ServiceNow</td></tr>
+</table>
+
+<!-- 2. ARCHITECTURE -->
+<h2>2. System Architecture</h2>
+<div class="arch">
+<span class="green">Browser</span>  →  React App (Vercel CDN)
+   │  Sends /api/now/* requests (no credentials in browser)
+   ▼
+<span class="green">Vercel Serverless Function</span>  (api/proxy.js)
+   │  Injects: Authorization: Basic &lt;base64 admin:password&gt;
+   ▼
+<span class="green">ServiceNow PDI</span>  (dev286774.service-now.com)
+   │  Business Rules fire automatically on INSERT / UPDATE / DELETE
+   ▼
+<span class="green">7 Custom Tables</span>  +  sys_user  +  5 Business Rules</div>
+
+<!-- 3. SERVICENOW TABLES -->
+<h2>3. ServiceNow Tables (7 Tables)</h2>
+<table>
+  <tr><th>Table Name</th><th>Purpose</th></tr>
+  <tr><td><code>sys_user</code></td><td>Volunteer &amp; Admin accounts (built-in SN table, extended with 5 custom fields)</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_ngo_projects</code></td><td>NGO project records with name, location, dates, skills, status</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_volunteer_assignments</code></td><td>Links volunteers to projects — tracks hours and completion status</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_impact_report</code></td><td>Impact reports with volunteers involved, hours, beneficiaries, outcome summary</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_events</code></td><td>Volunteer events with date, time, location, max participants, registered count</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_event_registrations</code></td><td>Links volunteers to events — triggers Business Rules on insert/delete</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_notifications</code></td><td>In-app notifications (approval, assignment, event) per volunteer</td></tr>
+</table>
+
+<h3>Custom Fields Added to sys_user</h3>
+<table>
+  <tr><th>Field</th><th>Values</th></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_u_is_volunteer</code></td><td>true / false — marks a user as a volunteer</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_u_approval_status</code></td><td>pending / approved / rejected</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_u_skills</code></td><td>comma-separated skills (Teaching, First Aid, IT Support...)</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_u_availability</code></td><td>weekdays / weekends / flexible / mornings / evenings</td></tr>
+  <tr><td><code>x_2048396_ngo_vo_1_u_address</code></td><td>volunteer address (City, State)</td></tr>
+</table>
+
+<!-- 4. BUSINESS RULES -->
+<h2 class="pb">4. ServiceNow Business Rules (Server-Side Automation)</h2>
+<table>
+  <tr><th>Rule</th><th>Table</th><th>Trigger</th><th>Action</th></tr>
+  <tr>
+    <td><span class="br-tag">BR-1</span></td>
+    <td><code>event_registrations</code></td>
+    <td>After INSERT</td>
+    <td>Increments <code>registered_count</code> on the parent event record</td>
+  </tr>
+  <tr>
+    <td><span class="br-tag">BR-2</span></td>
+    <td><code>event_registrations</code></td>
+    <td>Before DELETE</td>
+    <td>Decrements <code>registered_count</code> on the parent event record</td>
+  </tr>
+  <tr>
+    <td><span class="br-tag">BR-3</span></td>
+    <td><code>sys_user</code></td>
+    <td>After UPDATE when approval_status → approved</td>
+    <td>Creates an approval notification for the volunteer</td>
+  </tr>
+  <tr>
+    <td><span class="br-tag">BR-4</span></td>
+    <td><code>volunteer_assignments</code></td>
+    <td>After INSERT</td>
+    <td>Creates an assignment notification for the assigned volunteer</td>
+  </tr>
+  <tr>
+    <td><span class="br-tag">BR-5</span></td>
+    <td><code>event_registrations</code></td>
+    <td>After INSERT</td>
+    <td>Creates an event registration notification for the volunteer</td>
+  </tr>
+</table>
+
+<!-- 5. ROLES -->
+<h2>5. Login &amp; Role Separation</h2>
+<div class="card-grid">
+  <div class="card">
+    <div class="card-title">🔑 Admin Role</div>
+    <p>Logs in via the <strong>Admin</strong> tab. If a volunteer account tries the Admin tab — blocked with an error message.</p>
+    <p style="margin-top:8px"><strong>Can access:</strong></p>
+    <p>Dashboard · Volunteers · Projects · Assignments · Events · Impact Reports · Notifications</p>
+  </div>
+  <div class="card">
+    <div class="card-title">👤 Volunteer Role</div>
+    <p>Logs in via the <strong>Volunteer</strong> tab. Must be <code>active=true</code> and <code>approval_status=approved</code> in ServiceNow.</p>
+    <p style="margin-top:8px"><strong>Can access:</strong></p>
+    <p>Volunteer Dashboard · Notifications</p>
+  </div>
+</div>
+
+<h3>New Volunteer Sign-Up Flow</h3>
+<div class="flow">1. Volunteer signs up on login page
+   → sys_user record created: active=false, approval_status=pending
+2. Admin sees them in "Pending Approval" tab → clicks Approve
+   → active=true, approval_status=approved
+   → BR-3 fires → notification created: "Your registration has been approved"
+3. Volunteer can now log in and access the Volunteer Dashboard</div>
+
+<!-- 6. ADMIN PAGES -->
+<h2>6. Admin Portal — Pages &amp; Features</h2>
+<table>
+  <tr><th>Page</th><th>Features</th></tr>
+  <tr>
+    <td><strong>Dashboard</strong></td>
+    <td>Live stats (volunteers, projects, assignments, events) · ServiceNow connection status · Test SN Connection button pings all 7 tables</td>
+  </tr>
+  <tr>
+    <td><strong>Volunteers</strong></td>
+    <td>Active tab: searchable + paginated table, View Stats modal · Pending tab: Approve / Reject buttons · Register Volunteer (admin-approved instantly)</td>
+  </tr>
+  <tr>
+    <td><strong>Projects</strong></td>
+    <td>Card grid with search &amp; status filter · Full CRUD (create, edit, delete) · Skill tags on cards · Quick-add skill buttons in form</td>
+  </tr>
+  <tr>
+    <td><strong>Assignments</strong></td>
+    <td>Paginated table · Full CRUD · Skill-match suggestion (matching volunteers highlighted) · Hours progress bar per row</td>
+  </tr>
+  <tr>
+    <td><strong>Events</strong></td>
+    <td>Full CRUD · Registered count auto-maintained by BR-1 / BR-2 · Capacity tracking per event</td>
+  </tr>
+  <tr>
+    <td><strong>Impact Reports</strong></td>
+    <td>Aggregate stats strip · Tabbed bar chart (Beneficiaries / Hours / Volunteers per project) · Export report as .txt · Delete</td>
+  </tr>
+  <tr>
+    <td><strong>Notifications</strong></td>
+    <td>Shows all notifications · Mark as read / Mark all as read</td>
+  </tr>
+</table>
+
+<!-- 7. VOLUNTEER PORTAL -->
+<h2 class="pb">7. Volunteer Portal — Sections &amp; Features</h2>
+<table>
+  <tr><th>Section</th><th>Features</th></tr>
+  <tr>
+    <td><strong>Stats Row</strong></td>
+    <td>Total Volunteers · My Assignments · My Projects · Registered Events</td>
+  </tr>
+  <tr>
+    <td><strong>Volunteer Registration Form</strong></td>
+    <td>Always-visible form: Full Name, Phone, Skills (with quick-add buttons), Availability, Address · Saves directly, no approval message shown</td>
+  </tr>
+  <tr>
+    <td><strong>My Profile</strong></td>
+    <td>View / Edit toggle for all profile fields · Saves to ServiceNow</td>
+  </tr>
+  <tr>
+    <td><strong>My Assignments</strong></td>
+    <td>Lists assignments with inline hours logging — input + Log Hours button syncs hours to ServiceNow</td>
+  </tr>
+  <tr>
+    <td><strong>My Projects</strong></td>
+    <td>Projects the volunteer is currently assigned to</td>
+  </tr>
+  <tr>
+    <td><strong>Available Events</strong></td>
+    <td>Events open for registration · Spots-left counter · Register button triggers BR-1 (count++) and BR-5 (notification)</td>
+  </tr>
+  <tr>
+    <td><strong>Notifications</strong></td>
+    <td>Approval, assignment, and event notifications · Mark as read</td>
+  </tr>
+</table>
+
+<!-- 8. KEY DATA FLOWS -->
+<h2>8. Key Data Flows</h2>
+
+<h3>Admin Creates an Assignment</h3>
+<div class="flow">Admin clicks "Create Assignment"
+  → POST /x_2048396_ngo_vo_1_volunteer_assignments
+    → BR-4 fires in ServiceNow
+      → notification record created for the volunteer (type = assignment)
+        → Volunteer sees: "You have been assigned to project: [name]"</div>
+
+<h3>Volunteer Registers for an Event</h3>
+<div class="flow">Volunteer clicks "Register"
+  → POST /x_2048396_ngo_vo_1_event_registrations
+    → BR-1 fires → event.registered_count + 1
+    → BR-5 fires → notification created (type = event)
+      → Spots-left counter decrements on next page load</div>
+
+<h3>Volunteer Unregisters from an Event</h3>
+<div class="flow">DELETE /x_2048396_ngo_vo_1_event_registrations/{id}
+  → BR-2 fires → event.registered_count - 1
+    → Spot becomes available again for other volunteers</div>
+
+<h3>Admin Approves a Volunteer</h3>
+<div class="flow">Admin clicks "Approve" on Pending tab
+  → PATCH /sys_user/{id}  { active: true, approval_status: approved }
+    → BR-3 fires → notification created: "Your volunteer registration has been approved. Welcome to the team!"
+      → Volunteer can now log in with their credentials</div>
+
+<!-- 9. DEPLOYMENT -->
+<h2>9. Deployment</h2>
+<table>
+  <tr><th>Environment</th><th>URL</th><th>API Proxy</th></tr>
+  <tr><td>Local Development</td><td><code>http://localhost:5173</code></td><td>Vite dev proxy in vite.config.js</td></tr>
+  <tr><td>Production</td><td><code>https://ngo-impact-hub.vercel.app</code></td><td>Vercel serverless function (api/proxy.js)</td></tr>
+</table>
+<p>Both environments inject the ServiceNow Basic Auth header server-side. Credentials are never exposed in the browser JavaScript bundle.</p>
+<div class="url-badge">https://ngo-impact-hub.vercel.app</div>
+
+<!-- 10. CREDENTIALS -->
+<h2>10. Credentials</h2>
+<div class="cred">
+  <div class="cred-box admin">
+    <div class="role">🔑 Admin Account</div>
+    <div class="row"><span>Username:</span> admin</div>
+    <div class="row"><span>Password:</span> p/rLsoR41AV^</div>
+    <div class="row"><span>Tab:</span> Admin</div>
+  </div>
+  <div class="cred-box vol">
+    <div class="role">👤 Volunteer Account</div>
+    <div class="row"><span>Username:</span> any approved volunteer email</div>
+    <div class="row"><span>Password:</span> their registered password</div>
+    <div class="row"><span>Tab:</span> Volunteer</div>
+  </div>
+</div>
+
+<!-- 11. FILE STRUCTURE -->
+<h2>11. Key Project Files</h2>
+<table>
+  <tr><th>File / Folder</th><th>Purpose</th></tr>
+  <tr><td><code>src/api/servicenow.js</code></td><td>All ServiceNow REST API calls — auth, CRUD for all 7 tables, demo fallback data</td></tr>
+  <tr><td><code>src/App.jsx</code></td><td>Login logic, role validation, portal routing (admin vs volunteer)</td></tr>
+  <tr><td><code>src/components/Sidebar.jsx</code></td><td>Navigation sidebar — filters nav items by adminOnly flag</td></tr>
+  <tr><td><code>src/pages/VolunteersPage.jsx</code></td><td>Admin: volunteer management, approval, stats modal, pagination</td></tr>
+  <tr><td><code>src/pages/ProjectsPage.jsx</code></td><td>Admin: project CRUD with search and status filters</td></tr>
+  <tr><td><code>src/pages/AssignmentsPage.jsx</code></td><td>Admin: assignment CRUD with skill-match suggestions, pagination</td></tr>
+  <tr><td><code>src/pages/EventsPage.jsx</code></td><td>Admin: event CRUD</td></tr>
+  <tr><td><code>src/pages/ReportsPage.jsx</code></td><td>Admin: impact reports with tabbed bar charts</td></tr>
+  <tr><td><code>src/pages/VolunteerDashboard.jsx</code></td><td>Volunteer: registration form, assignments, events, hours logging</td></tr>
+  <tr><td><code>api/proxy.js</code></td><td>Vercel serverless function — proxies /api/now/* to ServiceNow with auth</td></tr>
+  <tr><td><code>vercel.json</code></td><td>Vercel config — rewrite rules for proxy and SPA routing</td></tr>
+  <tr><td><code>vite.config.js</code></td><td>Vite dev proxy config — forwards /api/now/* to ServiceNow in development</td></tr>
+</table>
+
+<div class="footer">NGO Volunteer Impact Hub &nbsp;·&nbsp; Built with React + ServiceNow &nbsp;·&nbsp; Deployed on Vercel &nbsp;·&nbsp; 2025</div>
+
+</body>
+</html>

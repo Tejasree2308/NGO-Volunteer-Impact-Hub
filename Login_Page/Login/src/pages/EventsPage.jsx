@@ -86,6 +86,7 @@ export default function EventsPage() {
     if (!form.u_description.trim()) e.u_description = 'Description is required'
     if (!form.u_location.trim()) e.u_location = 'Location is required'
     if (!form.u_event_date) e.u_event_date = 'Event date is required'
+    else if (form.u_event_date < new Date().toISOString().split('T')[0]) e.u_event_date = 'Event date cannot be in the past'
     if (!form.u_start_time) e.u_start_time = 'Start time is required'
     if (!form.u_end_time) e.u_end_time = 'End time is required'
     if (form.u_max_participants && (isNaN(form.u_max_participants) || form.u_max_participants < 1)) {

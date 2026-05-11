@@ -77,9 +77,13 @@ export default function ProjectsPage() {
 
   function validate() {
     const e = {}
+    const today = new Date().toISOString().split('T')[0]
     if (!form.u_project_name.trim()) e.u_project_name = 'Project name required'
     if (!form.u_location.trim())     e.u_location     = 'Location required'
     if (!form.u_start_date)          e.u_start_date   = 'Start date required'
+    else if (form.u_start_date < today) e.u_start_date = 'Start date cannot be in the past'
+    if (form.u_end_date && form.u_end_date < today)
+      e.u_end_date = 'End date cannot be in the past'
     if (form.u_end_date && form.u_start_date && form.u_end_date < form.u_start_date)
       e.u_end_date = 'End date must be after start date'
     return e
@@ -233,12 +237,14 @@ export default function ProjectsPage() {
             <label className="form-label">Start Date <span className="req">*</span></label>
             <input type="date" className={`form-input${errors.u_start_date ? ' input-error' : ''}`}
               value={form.u_start_date}
+              min={new Date().toISOString().split('T')[0]}
               onChange={e => { setForm(p => ({ ...p, u_start_date: e.target.value })); setErrors(p => ({ ...p, u_start_date: '' })) }}/>
             {errors.u_start_date && <span className="field-error">{errors.u_start_date}</span>}
           </div>
           <div className="form-field">
             <label className="form-label">End Date</label>
             <input type="date" className={`form-input${errors.u_end_date ? ' input-error' : ''}`} value={form.u_end_date}
+              min={new Date().toISOString().split('T')[0]}
               onChange={e => { setForm(p => ({ ...p, u_end_date: e.target.value })); setErrors(p => ({ ...p, u_end_date: '' })) }}/>
             {errors.u_end_date && <span className="field-error">{errors.u_end_date}</span>}
           </div>

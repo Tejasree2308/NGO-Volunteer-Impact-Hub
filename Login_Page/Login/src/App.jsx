@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import logoImg from './assets/image.png'
-import { authenticateUser, createVolunteer, getNotifications } from './api/servicenow'
+import { authenticateUser, createVolunteer, createAdmin, getNotifications } from './api/servicenow'
 import Sidebar from './components/Sidebar'
 import SNStatusBanner from './components/SNStatusBanner'
 import Dashboard from './pages/Dashboard'
@@ -57,6 +57,151 @@ const IconCheck = () => (
    ═══════════════════════════════════════════════════════════════════════════ */
 const validateEmail    = v => v.trim().length >= 3   // accept username OR email
 const validatePassword = v => v.length >= 6
+
+function decodeInviteToken(token) {
+  try {
+    const padded = token.replace(/-/g, '+').replace(/_/g, '/')
+    const mod4   = padded.length % 4
+    const fixed  = mod4 ? padded + '===='.slice(mod4) : padded
+    const data   = JSON.parse(atob(fixed))
+    if (!data.email || !data.exp) return null
+    return { email: data.email, exp: data.exp, expired: Date.now() > data.exp }
+  } catch {
+    return null
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN INVITE REGISTER PAGE
+   ═══════════════════════════════════════════════════════════════════════════ */
+function AdminRegisterPage({ inviteEmail, onSuccess }) {
+  const [name,    setName]    = useState('')
+  const [pwd,     setPwd]     = useState('')
+  const [cpwd,    setCpwd]    = useState('')
+  const [loading, setLoading] = useState(false)
+  const [errors,  setErrors]  = useState({})
+  const [toast,   setToast]   = useState(null)
+  const [toastVis, setToastVis] = useState(false)
+
+  function showToast(type, msg) {
+    setToast({ type, msg })
+    setToastVis(true)
+    setTimeout(() => { setToastVis(false); setTimeout(() => setToast(null), 400) }, 3200)
+  }
+
+  function validate() {
+    const e = {}
+    if (!name.trim())             e.name = 'Full name is required.'
+    if (!pwd || pwd.length < 6)   e.pwd  = 'Password must be at least 6 characters.'
+    if (pwd !== cpwd)             e.cpwd = 'Passwords do not match.'
+    return e
+  }
+
+  async function handleSubmit(evt) {
+    evt.preventDefault()
+    const errs = validate()
+    if (Object.keys(errs).length) { setErrors(errs); return }
+    setErrors({})
+    setLoading(true)
+    try {
+      await createAdmin({ name, email: inviteEmail, user_password: pwd })
+      showToast('success', 'Admin account created! Redirecting to login…')
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/')
+        onSuccess()
+      }, 2000)
+    } catch (err) {
+      showToast('error', err.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="login-bg" aria-hidden="true">
+        <div className="corner-accent top-left"/><div className="corner-accent top-right"/>
+        <div className="corner-accent bot-left"/><div className="corner-accent bot-right"/>
+      </div>
+      <main className="login-wrapper">
+        <div className="login-card">
+          <div className="login-logo"><img src={logoImg} alt="NGO Impact Hub" className="logo-img"/></div>
+          <div className="login-heading">
+            <h1>NGO <span>Impact Hub</span></h1>
+            <p>You've been invited to register as an admin</p>
+          </div>
+
+          <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:'10px', padding:'12px 16px', marginBottom:'16px', display:'flex', alignItems:'center', gap:'10px' }}>
+            <span style={{ fontSize:'18px' }}>🔐</span>
+            <div>
+              <div style={{ fontSize:'12px', fontWeight:700, color:'#065f46' }}>Invite Accepted</div>
+              <div style={{ fontSize:'12px', color:'#059669' }}>{inviteEmail}</div>
+            </div>
+          </div>
+
+          <form className="login-form" onSubmit={handleSubmit} noValidate>
+            <div className="field-group">
+              <label className="field-label">Full Name</label>
+              <div className="field-wrap">
+                <input type="text" className={`field-input${errors.name ? ' error' : ''}`}
+                  placeholder="Your full name" value={name}
+                  onChange={e => { setName(e.target.value); setErrors(p => ({...p, name:''})) }}/>
+              </div>
+              {errors.name && <span className="error-msg">⚠ {errors.name}</span>}
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Email Address</label>
+              <div className="field-wrap">
+                <input type="email" className="field-input" value={inviteEmail} readOnly
+                  style={{ background:'#f8fafc', color:'#64748b', cursor:'not-allowed' }}/>
+              </div>
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Password</label>
+              <div className="field-wrap">
+                <span className="field-icon"><IconLock/></span>
+                <input type="password" className={`field-input${errors.pwd ? ' error' : ''}`}
+                  placeholder="Min 6 characters" value={pwd}
+                  onChange={e => { setPwd(e.target.value); setErrors(p => ({...p, pwd:''})) }}/>
+              </div>
+              {errors.pwd && <span className="error-msg">⚠ {errors.pwd}</span>}
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Confirm Password</label>
+              <div className="field-wrap">
+                <span className="field-icon"><IconLock/></span>
+                <input type="password" className={`field-input${errors.cpwd ? ' error' : ''}`}
+                  placeholder="Re-enter password" value={cpwd}
+                  onChange={e => { setCpwd(e.target.value); setErrors(p => ({...p, cpwd:''})) }}/>
+              </div>
+              {errors.cpwd && <span className="error-msg">⚠ {errors.cpwd}</span>}
+            </div>
+
+            <button type="submit" className="btn-submit" disabled={loading} style={{ marginTop:'1rem' }}>
+              {loading && <span className="spinner"/>}
+              {loading ? 'Creating Account…' : 'Complete Admin Registration'}
+            </button>
+          </form>
+
+          <div className="card-tagline">
+            <span className="tagline-dot teal"/>Secure
+            <span className="tagline-dot gold"/>Verified
+            <span className="tagline-dot green"/>Trusted
+          </div>
+        </div>
+      </main>
+      {toast && (
+        <div className={`toast${toastVis ? ' show' : ''}${toast.type === 'success' ? ' success' : ' error-toast'}`}>
+          <span className="toast-icon">{toast.type === 'success' ? <IconCheck/> : '✕'}</span>
+          {toast.msg}
+        </div>
+      )}
+    </>
+  )
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LOGIN PAGE
@@ -429,23 +574,39 @@ function Portal({ user, onLogout }) {
    ROOT APP
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function App() {
-  const [user, setUser] = useState(null)
+  const [user, setUser]           = useState(null)
+  const [inviteData, setInviteData] = useState(null) // { email, exp, expired }
+  const [inviteChecked, setInviteChecked] = useState(false)
 
-  // Restore session from localStorage
   useEffect(() => {
+    // Check for invite token in URL
+    const params = new URLSearchParams(window.location.search)
+    const token  = params.get('invite')
+    if (token) {
+      const data = decodeInviteToken(token)
+      setInviteData(data)
+    }
+    setInviteChecked(true)
+
+    // Restore session from localStorage
     try {
       const session = localStorage.getItem('ngo_session')
       if (session) setUser(JSON.parse(session))
     } catch {}
   }, [])
 
-  function handleLogin(userData) {
-    setUser(userData)
-  }
+  function handleLogin(userData) { setUser(userData) }
 
   function handleLogout() {
     localStorage.removeItem('ngo_session')
     setUser(null)
+  }
+
+  if (!inviteChecked) return null
+
+  // Valid (non-expired) invite link → show Admin Registration
+  if (inviteData && !inviteData.expired && !user) {
+    return <AdminRegisterPage inviteEmail={inviteData.email} onSuccess={() => setInviteData(null)} />
   }
 
   if (!user) return <LoginPage onLogin={handleLogin} />

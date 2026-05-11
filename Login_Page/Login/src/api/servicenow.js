@@ -258,7 +258,9 @@ export function getCurrentUser(token) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// VOLUNTEERS  (sys_user table filtered to volunteer role)
+// VOLUNTEERS
+// Auth lives in sys_user; profile details stored in the custom app table
+// x_2048396_ngo_vo_1_volunteers so records appear in App Engine Studio.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SN_VOL_IS_VOLUNTEER    = 'x_2048396_ngo_vo_1_u_is_volunteer'
@@ -267,19 +269,30 @@ const SN_VOL_SKILLS          = 'x_2048396_ngo_vo_1_u_skills'
 const SN_VOL_AVAILABILITY    = 'x_2048396_ngo_vo_1_u_availability'
 const SN_VOL_ADDRESS         = 'x_2048396_ngo_vo_1_u_address'
 
-const VOLUNTEER_FIELDS = `sys_id,name,email,mobile_phone,${SN_VOL_SKILLS},${SN_VOL_AVAILABILITY},${SN_VOL_ADDRESS},active`
+const SN_TABLE_VOLUNTEERS = 'x_2048396_ngo_vo_1_volunteers'
+const VOL_FIELDS = 'sys_id,u_name,u_email,u_phone,u_skills,u_availability,u_address,u_approval_status,u_is_active,u_sys_user_id'
+
+function mapVol(r) {
+  return {
+    sys_id:           r.sys_id,
+    name:             r.u_name             || '',
+    email:            r.u_email            || '',
+    mobile_phone:     r.u_phone            || '',
+    u_skills:         r.u_skills           || '',
+    u_availability:   r.u_availability     || '',
+    u_address:        r.u_address          || '',
+    u_approval_status: r.u_approval_status || 'pending',
+    active:           r.u_is_active === 'true' || r.u_is_active === true ? 'true' : 'false',
+    u_sys_user_id:    r.u_sys_user_id      || '',
+  }
+}
 
 export async function getVolunteers() {
   try {
     const data = await snFetch(
-      `/sys_user?sysparm_query=${SN_VOL_IS_VOLUNTEER}=true^active=true&sysparm_fields=${VOLUNTEER_FIELDS}&sysparm_limit=50`
+      `/${SN_TABLE_VOLUNTEERS}?sysparm_query=u_approval_status=approved^u_is_active=true&sysparm_fields=${VOL_FIELDS}&sysparm_limit=50`
     )
-    return (data.result || []).map(r => ({
-      ...r,
-      u_skills:       r[SN_VOL_SKILLS]       || r.u_skills       || '',
-      u_availability: r[SN_VOL_AVAILABILITY] || r.u_availability || '',
-      u_address:      r[SN_VOL_ADDRESS]       || r.u_address       || '',
-    }))
+    return (data.result || []).map(mapVol)
   } catch {
     return DEMO_VOLUNTEERS
   }
@@ -287,22 +300,41 @@ export async function getVolunteers() {
 
 export async function createVolunteer(payload) {
   try {
-    const data = await snFetch('/sys_user', {
+    const isAdminCreated = payload.u_approval_status === 'approved'
+    // 1. Create sys_user record for authentication
+    const userResp = await snFetch('/sys_user', {
       method: 'POST',
       body: JSON.stringify({
-        name:                     payload.name,
-        email:                    payload.email,
-        mobile_phone:             payload.mobile_phone,
-        user_password:            payload.user_password,
-        [SN_VOL_IS_VOLUNTEER]:   'true',
-        [SN_VOL_APPROVAL]:       payload.u_approval_status || 'pending',
-        [SN_VOL_SKILLS]:         payload.u_skills || '',
-        [SN_VOL_AVAILABILITY]:   payload.u_availability || '',
-        [SN_VOL_ADDRESS]:        payload.u_address || '',
-        active:                   'false',
+        name:                   payload.name,
+        email:                  payload.email,
+        mobile_phone:           payload.mobile_phone,
+        user_password:          payload.user_password,
+        [SN_VOL_IS_VOLUNTEER]: 'true',
+        [SN_VOL_APPROVAL]:     payload.u_approval_status || 'pending',
+        [SN_VOL_SKILLS]:       payload.u_skills || '',
+        [SN_VOL_AVAILABILITY]: payload.u_availability || '',
+        [SN_VOL_ADDRESS]:      payload.u_address || '',
+        active:                 isAdminCreated ? 'true' : 'false',
       }),
     })
-    return data.result
+    const sysUserId = userResp.result?.sys_id || ''
+
+    // 2. Create record in custom volunteers table (visible in App Engine Studio)
+    const volResp = await snFetch(`/${SN_TABLE_VOLUNTEERS}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        u_name:            payload.name,
+        u_email:           payload.email,
+        u_phone:           payload.mobile_phone || '',
+        u_skills:          payload.u_skills || '',
+        u_availability:    payload.u_availability || '',
+        u_address:         payload.u_address || '',
+        u_approval_status: payload.u_approval_status || 'pending',
+        u_is_active:       isAdminCreated ? 'true' : 'false',
+        u_sys_user_id:     sysUserId,
+      }),
+    })
+    return { ...volResp.result, sys_id: volResp.result?.sys_id, u_sys_user_id: sysUserId }
   } catch (err) {
     return writeFallback(err, { sys_id: `demo-${Date.now()}`, ...payload })
   }
@@ -310,19 +342,38 @@ export async function createVolunteer(payload) {
 
 export async function updateVolunteer(sysId, payload) {
   try {
-    const snPayload = {
+    // Update sys_user fields (for auth record)
+    const sysUserPatch = {
       name:                   payload.name,
       email:                  payload.email,
       mobile_phone:           payload.mobile_phone,
-      [SN_VOL_SKILLS]:       payload.u_skills       || payload[SN_VOL_SKILLS]       || '',
-      [SN_VOL_AVAILABILITY]: payload.u_availability || payload[SN_VOL_AVAILABILITY] || '',
-      [SN_VOL_ADDRESS]:      payload.u_address       || payload[SN_VOL_ADDRESS]       || '',
+      [SN_VOL_SKILLS]:       payload.u_skills || '',
+      [SN_VOL_AVAILABILITY]: payload.u_availability || '',
+      [SN_VOL_ADDRESS]:      payload.u_address || '',
     }
-    const data = await snFetch(`/sys_user/${sysId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(snPayload),
-    })
-    return data.result
+    // Find matching custom volunteer record by sys_user_id
+    const findResp = await snFetch(
+      `/${SN_TABLE_VOLUNTEERS}?sysparm_query=u_sys_user_id=${sysId}&sysparm_fields=sys_id&sysparm_limit=1`
+    ).catch(() => null)
+    const volRecord = findResp?.result?.[0]
+
+    await Promise.all([
+      snFetch(`/sys_user/${sysId}`, { method: 'PATCH', body: JSON.stringify(sysUserPatch) }),
+      volRecord
+        ? snFetch(`/${SN_TABLE_VOLUNTEERS}/${volRecord.sys_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              u_name:         payload.name,
+              u_email:        payload.email,
+              u_phone:        payload.mobile_phone || '',
+              u_skills:       payload.u_skills || '',
+              u_availability: payload.u_availability || '',
+              u_address:      payload.u_address || '',
+            }),
+          })
+        : Promise.resolve(),
+    ])
+    return { sys_id: sysId, ...payload }
   } catch (err) {
     return writeFallback(err, { sys_id: sysId, ...payload })
   }
@@ -331,15 +382,9 @@ export async function updateVolunteer(sysId, payload) {
 export async function getPendingVolunteers() {
   try {
     const data = await snFetch(
-      `/sys_user?sysparm_query=${SN_VOL_IS_VOLUNTEER}=true^active=false^${SN_VOL_APPROVAL}=pending&sysparm_fields=${VOLUNTEER_FIELDS},${SN_VOL_APPROVAL}&sysparm_limit=50`
+      `/${SN_TABLE_VOLUNTEERS}?sysparm_query=u_approval_status=pending&sysparm_fields=${VOL_FIELDS}&sysparm_limit=50`
     )
-    return (data.result || []).map(r => ({
-      ...r,
-      u_skills:          r[SN_VOL_SKILLS]       || '',
-      u_availability:    r[SN_VOL_AVAILABILITY] || '',
-      u_address:         r[SN_VOL_ADDRESS]       || '',
-      u_approval_status: r[SN_VOL_APPROVAL]      || 'pending',
-    }))
+    return (data.result || []).map(mapVol)
   } catch {
     return DEMO_PENDING_VOLUNTEERS
   }
@@ -347,32 +392,74 @@ export async function getPendingVolunteers() {
 
 export async function approveVolunteer(sysId) {
   try {
-    const data = await snFetch(`/sys_user/${sysId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ active: 'true', [SN_VOL_APPROVAL]: 'approved' }),
-    })
-    return data.result
+    // sysId here is the custom volunteers table sys_id
+    const rec = await snFetch(`/${SN_TABLE_VOLUNTEERS}/${sysId}?sysparm_fields=u_sys_user_id`)
+    const sysUserId = rec.result?.u_sys_user_id
+
+    await Promise.all([
+      snFetch(`/${SN_TABLE_VOLUNTEERS}/${sysId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ u_approval_status: 'approved', u_is_active: 'true' }),
+      }),
+      sysUserId
+        ? snFetch(`/sys_user/${sysUserId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ active: 'true', [SN_VOL_APPROVAL]: 'approved' }),
+          })
+        : Promise.resolve(),
+    ])
+    return { sys_id: sysId }
   } catch (err) {
-    return writeFallback(err, { sys_id: sysId, active: 'true', u_approval_status: 'approved' })
+    return writeFallback(err, { sys_id: sysId, u_approval_status: 'approved' })
   }
 }
 
 export async function rejectVolunteer(sysId) {
   try {
-    const data = await snFetch(`/sys_user/${sysId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ active: 'false', [SN_VOL_APPROVAL]: 'rejected' }),
-    })
-    return data.result
+    const rec = await snFetch(`/${SN_TABLE_VOLUNTEERS}/${sysId}?sysparm_fields=u_sys_user_id`)
+    const sysUserId = rec.result?.u_sys_user_id
+
+    await Promise.all([
+      snFetch(`/${SN_TABLE_VOLUNTEERS}/${sysId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ u_approval_status: 'rejected', u_is_active: 'false' }),
+      }),
+      sysUserId
+        ? snFetch(`/sys_user/${sysUserId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ active: 'false', [SN_VOL_APPROVAL]: 'rejected' }),
+          })
+        : Promise.resolve(),
+    ])
+    return { sys_id: sysId }
   } catch (err) {
-    return writeFallback(err, { sys_id: sysId, active: 'false', u_approval_status: 'rejected' })
+    return writeFallback(err, { sys_id: sysId, u_approval_status: 'rejected' })
+  }
+}
+
+export async function createAdmin(payload) {
+  try {
+    const resp = await snFetch('/sys_user', {
+      method: 'POST',
+      body: JSON.stringify({
+        name:                   payload.name,
+        email:                  payload.email,
+        user_password:          payload.user_password,
+        active:                 'true',
+        [SN_VOL_IS_VOLUNTEER]: 'false',
+        [SN_VOL_APPROVAL]:     'approved',
+      }),
+    })
+    return resp.result
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-admin-${Date.now()}`, ...payload })
   }
 }
 
 export async function getMyAssignments(volunteerSysId) {
   try {
     const data = await snFetch(
-      `/${SN_TABLE_ASSIGNMENTS}?sysparm_query=volunteer=${volunteerSysId}&sysparm_fields=sys_id,volunteer,project,assigned_date,hours_worked,completion_status&sysparm_limit=50`
+      `/${SN_TABLE_ASSIGNMENTS}?sysparm_query=volunteer=${volunteerSysId}&sysparm_fields=sys_id,volunteer,project,assigned_date,hours_worked,completion_status&sysparm_display_value=all&sysparm_limit=50`
     )
     return (data.result || []).map(mapAssignment)
   } catch {
@@ -474,11 +561,24 @@ export async function createProject(payload) {
 
 const SN_TABLE_ASSIGNMENTS = 'x_2048396_ngo_vo_1_volunteer_assignments'
 
+function refVal(field) {
+  if (!field) return ''
+  return typeof field === 'object' ? (field.value || '') : field
+}
+function refDisplay(field) {
+  if (!field) return ''
+  return typeof field === 'object' ? (field.display_value || field.value || '') : field
+}
+
 function mapAssignment(r) {
+  const volField  = r.volunteer  || r.u_volunteer
+  const projField = r.project    || r.u_project
   return {
     sys_id:               r.sys_id,
-    u_volunteer:          safeStr(r.volunteer          || r.u_volunteer),
-    u_project:            safeStr(r.project            || r.u_project),
+    u_volunteer:          refVal(volField),
+    u_volunteer_name:     refDisplay(volField),
+    u_project:            refVal(projField),
+    u_project_name:       refDisplay(projField),
     u_assigned_date:      safeStr(r.assigned_date      || r.u_assigned_date),
     u_hours_worked:       safeStr(r.hours_worked       || r.u_hours_worked       || '0'),
     u_completion_status:  safeStr(r.completion_status  || r.u_completion_status  || 'pending'),
@@ -488,7 +588,7 @@ function mapAssignment(r) {
 export async function getAssignments() {
   try {
     const data = await snFetch(
-      `/${SN_TABLE_ASSIGNMENTS}?sysparm_fields=sys_id,volunteer,project,assigned_date,hours_worked,completion_status&sysparm_limit=100`
+      `/${SN_TABLE_ASSIGNMENTS}?sysparm_fields=sys_id,volunteer,project,assigned_date,hours_worked,completion_status&sysparm_display_value=all&sysparm_limit=100`
     )
     return (data.result || []).map(mapAssignment)
   } catch {
@@ -510,6 +610,19 @@ export async function createAssignment(payload) {
       body: JSON.stringify(snPayload),
     })
     const result = mapAssignment(data.result)
+
+    // Create notification using the volunteer's sys_user sys_id so it appears in their inbox.
+    // payload.u_volunteer_sys_user_id is the sys_user.sys_id (from u_sys_user_id on custom table).
+    const recipientId = payload.u_volunteer_sys_user_id
+    const projectName = payload.u_project_name || 'a project'
+    if (recipientId) {
+      createNotification({
+        u_recipient: recipientId,
+        u_message:   `You have been assigned to the project: "${projectName}". Check your dashboard for details.`,
+        u_type:      'assignment',
+      }).catch(() => {})
+    }
+
     return result
   } catch (err) {
     return writeFallback(err, { sys_id: `demo-asgn-${Date.now()}`, ...payload })

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getVolunteers, updateVolunteer, getAssignments, getProjects, getAvailableEvents, registerForEvent, getEventRegistrations, updateAssignmentHours } from '../api/servicenow'
+import { getVolunteers, updateVolunteer, getAssignments, getMyAssignments, getProjects, getAvailableEvents, registerForEvent, getEventRegistrations, updateAssignmentHours } from '../api/servicenow'
 import './Dashboard.css'
 
 const SKILLS_OPTIONS = ['Teaching', 'First Aid', 'IT Support', 'Data Entry', 'Healthcare', 'Counseling', 'Environmental', 'Planting', 'Social Work', 'Community', 'Legal Aid', 'Advocacy']
@@ -28,9 +28,11 @@ export default function VolunteerDashboard({ user }) {
     async function load() {
       setLoading(true)
       try {
-        const [v, a, p, events, regs] = await Promise.all([
-          getVolunteers(),
-          getAssignments(),
+        const v = await getVolunteers()
+        const myRecord = v.find(vol => vol.email === user.email)
+        const myVolSysId = myRecord?.sys_id || user.sys_id
+        const [a, p, events, regs] = await Promise.all([
+          getMyAssignments(myVolSysId),
           getProjects(),
           getAvailableEvents(user.sys_id),
           getEventRegistrations(user.sys_id)
@@ -40,8 +42,6 @@ export default function VolunteerDashboard({ user }) {
         setProjects(p)
         setAvailableEvents(events)
         setMyRegistrations(regs)
-        // Find current user's volunteer record
-        const myRecord = v.find(v => v.email === user.email)
         if (myRecord) {
           setForm({
             name: myRecord.name || '',
@@ -155,14 +155,13 @@ export default function VolunteerDashboard({ user }) {
 
   if (loading) return <LoadingState />
 
-  // Find my volunteer record
-  const myRecord = volunteers.find(v => v.email === user.email)
-  const myAssignments = assignments.filter(a =>
-    a.u_volunteer === myRecord?.sys_id ||
-    (myRecord && (a.u_volunteer || '').toLowerCase().includes((myRecord.name || '').toLowerCase()))
-  )
+  // assignments are already filtered server-side to this volunteer
+  const myAssignments = assignments
   const myProjectIds = [...new Set(myAssignments.map(a => a.u_project).filter(Boolean))]
-  const myProjects = projects.filter(p => myProjectIds.includes(p.sys_id) || myProjectIds.some(id => p.u_project_name === id))
+  const myProjects = projects.filter(p =>
+    myProjectIds.includes(p.sys_id) ||
+    myAssignments.some(a => a.u_project_name === p.u_project_name)
+  )
 
   return (
     <div className="page-wrapper">
@@ -368,7 +367,7 @@ export default function VolunteerDashboard({ user }) {
           <div className="assignments-list">
             {myAssignments.length > 0 ? myAssignments.slice(0, 5).map(a => {
               const currentHours = hoursEdits[a.sys_id] !== undefined ? hoursEdits[a.sys_id] : (a.u_hours_worked || '0')
-              const projectName = projects.find(p => p.sys_id === a.u_project || p.u_project_name === a.u_project)?.u_project_name || a.u_project || 'Unknown Project'
+              const projectName = a.u_project_name || projects.find(p => p.sys_id === a.u_project)?.u_project_name || a.u_project || 'Unknown Project'
               return (
                 <div key={a.sys_id} className="assignment-item" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>

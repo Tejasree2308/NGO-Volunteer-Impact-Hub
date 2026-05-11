@@ -3,6 +3,11 @@ import { getDashboardStats, getProjects, getAssignments, testSnConnection } from
 import Modal from '../components/Modal'
 import './Dashboard.css'
 
+function generateInviteToken(email, expiryMs) {
+  const data = { email, exp: Date.now() + parseInt(expiryMs), nonce: Math.random().toString(36).slice(2, 10) }
+  return btoa(JSON.stringify(data)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+}
+
 const STAT_CONFIG = [
   { key: 'totalVolunteers',   label: 'Total Volunteers',      color: 'teal',   icon: <IconUsers /> },
   { key: 'activeProjects',    label: 'Active Projects',       color: 'blue',   icon: <IconBriefcase /> },
@@ -18,6 +23,37 @@ export default function Dashboard() {
   const [testModal, setTestModal] = useState(false)
   const [testResults, setTestResults] = useState(null)
   const [testRunning, setTestRunning] = useState(false)
+
+  const [inviteModal, setInviteModal]   = useState(false)
+  const [inviteEmail, setInviteEmail]   = useState('')
+  const [inviteExpiry, setInviteExpiry] = useState('3600000')
+  const [inviteLink, setInviteLink]     = useState('')
+  const [inviteCopied, setInviteCopied] = useState(false)
+  const [inviteErr, setInviteErr]       = useState('')
+
+  function handleGenerateInvite() {
+    if (!inviteEmail || !/\S+@\S+\.\S+/.test(inviteEmail)) {
+      setInviteErr('Please enter a valid email address.')
+      return
+    }
+    setInviteErr('')
+    const token = generateInviteToken(inviteEmail, inviteExpiry)
+    setInviteLink(`${window.location.origin}?invite=${token}`)
+  }
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(inviteLink).catch(() => {})
+    setInviteCopied(true)
+    setTimeout(() => setInviteCopied(false), 2000)
+  }
+
+  function handleOpenInvite() {
+    setInviteEmail('')
+    setInviteLink('')
+    setInviteErr('')
+    setInviteExpiry('3600000')
+    setInviteModal(true)
+  }
 
   async function handleTestConnection() {
     setTestModal(true)
@@ -151,6 +187,79 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Invite Admin Card */}
+      <div className="invite-admin-card">
+        <div className="invite-admin-left">
+          <div className="invite-admin-icon"><IconShield /></div>
+          <div>
+            <h3>Invite-Based Admin Registration</h3>
+            <p>Generate a secure, time-limited invite link and share it with a trusted person to register as an admin.</p>
+          </div>
+        </div>
+        <button className="btn-invite" onClick={handleOpenInvite}>
+          <IconSend /> Generate Invite Link
+        </button>
+      </div>
+
+      {/* Invite Admin Modal */}
+      <Modal isOpen={inviteModal} onClose={() => setInviteModal(false)} title="Invite Admin Registration" size="md">
+        <div className="invite-modal-body">
+          <div className="invite-steps">
+            <div className="invite-step"><span className="step-num">1</span><span>Enter the admin's email address</span></div>
+            <div className="invite-step"><span className="step-num">2</span><span>Choose how long the link stays active</span></div>
+            <div className="invite-step"><span className="step-num">3</span><span>Copy & share the secure link</span></div>
+          </div>
+
+          <div className="invite-field-group">
+            <label className="invite-label">Admin Email Address</label>
+            <input
+              type="email"
+              className={`invite-input${inviteErr ? ' invite-input-err' : ''}`}
+              placeholder="newadmin@organization.com"
+              value={inviteEmail}
+              onChange={e => { setInviteEmail(e.target.value); setInviteErr(''); setInviteLink('') }}
+            />
+            {inviteErr && <span className="invite-err">{inviteErr}</span>}
+          </div>
+
+          <div className="invite-field-group">
+            <label className="invite-label">Link Expiry</label>
+            <div className="invite-expiry-row">
+              {[['600000','10 minutes'],['3600000','1 hour'],['86400000','24 hours']].map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  className={`expiry-chip${inviteExpiry === val ? ' active' : ''}`}
+                  onClick={() => { setInviteExpiry(val); setInviteLink('') }}
+                >{label}</button>
+              ))}
+            </div>
+          </div>
+
+          <button className="btn-generate" onClick={handleGenerateInvite} disabled={!inviteEmail}>
+            <IconSend /> Generate Secure Link
+          </button>
+
+          {inviteLink && (
+            <div className="invite-link-box">
+              <div className="invite-link-label">
+                <span className="invite-link-badge">Secure Invite Link</span>
+                <span className="invite-link-expiry">
+                  Expires in {inviteExpiry === '600000' ? '10 minutes' : inviteExpiry === '3600000' ? '1 hour' : '24 hours'}
+                </span>
+              </div>
+              <div className="invite-link-url">{inviteLink}</div>
+              <button className={`btn-copy${inviteCopied ? ' copied' : ''}`} onClick={handleCopyLink}>
+                {inviteCopied ? '✓ Copied!' : 'Copy Link'}
+              </button>
+              <p className="invite-link-note">
+                Share this link via email or message. Only the invited person can use it to register as admin. The link is single-use and expires automatically.
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
       {/* SN Connection Test Modal */}
       <Modal isOpen={testModal} onClose={() => setTestModal(false)} title="ServiceNow Connection Test" size="md">
         {testRunning ? (
@@ -279,4 +388,10 @@ function IconHeart() {
 }
 function IconTarget() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+}
+function IconShield() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+}
+function IconSend() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
 }
