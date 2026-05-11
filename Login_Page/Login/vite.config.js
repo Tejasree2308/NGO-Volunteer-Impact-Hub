@@ -4,9 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  // test config is picked up by vitest automatically when present in defineConfig
 
   return {
     plugins: [react()],
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./src/__tests__/setup.js'],
+    },
     server: {
       proxy: {
         // Proxy all /api/now/* calls to your ServiceNow PDI

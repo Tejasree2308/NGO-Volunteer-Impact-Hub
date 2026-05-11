@@ -1,9 +1,13 @@
 // Vercel serverless proxy — receives all /api/now/* requests via vercel.json rewrite
 // The rewrite injects ?snpath=<table/path> and preserves original query params.
 export default async function handler(req, res) {
-  const snInstance = process.env.VITE_SN_INSTANCE || 'https://dev286774.service-now.com'
-  const snUsername = process.env.VITE_SN_USERNAME || 'admin'
-  const snPassword = process.env.VITE_SN_PASSWORD || 'p/rLsoR41AV^'
+  const snInstance = process.env.VITE_SN_INSTANCE
+  const snUsername = process.env.VITE_SN_USERNAME
+  const snPassword = process.env.VITE_SN_PASSWORD
+
+  if (!snInstance || !snUsername || !snPassword) {
+    return res.status(500).json({ error: 'Server misconfiguration: ServiceNow environment variables are not set.' })
+  }
 
   // snpath = 'table/x_2048396_ngo_vo_1_ngo_projects'
   // remaining queryParams = { sysparm_limit, sysparm_fields, sysparm_query, ... }

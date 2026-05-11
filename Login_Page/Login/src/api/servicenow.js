@@ -84,67 +84,36 @@ async function snFetch(path, options = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AUTHENTICATION SYSTEM
+// AUTHENTICATION SYSTEM  — stateless JWT-style tokens
+// Token = base64(payload JSON) — self-contained, survives cold starts.
+// No server-side Map; the token itself carries expiry and user data.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Enhanced authentication system with JWT-like session management
- */
-
-// In-memory session store (in production, use Redis/database)
-const sessions = new Map()
 const SESSION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
 
-/**
- * Generate a session token
- */
-function generateSessionToken() {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+function createSession(user) {
+  const payload = { ...user, iat: Date.now(), exp: Date.now() + SESSION_TIMEOUT }
+  return btoa(JSON.stringify(payload))
 }
 
-/**
- * Validate session token
- */
 function validateSessionToken(token) {
-  if (!token || !sessions.has(token)) return null
-
-  const session = sessions.get(token)
-  if (Date.now() - session.created > SESSION_TIMEOUT) {
-    sessions.delete(token)
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token))
+    if (!payload.exp || Date.now() > payload.exp) return null
+    const { iat, exp, ...user } = payload
+    return user
+  } catch {
     return null
   }
-
-  return session.user
 }
 
-/**
- * Create a new session
- */
-function createSession(user) {
-  const token = generateSessionToken()
-  const session = {
-    user,
-    created: Date.now(),
-    lastActivity: Date.now()
-  }
-  sessions.set(token, session)
-  return token
+function destroySession(_token) {
+  // Stateless — caller removes the token from localStorage; nothing to clear server-side.
 }
 
-/**
- * Destroy a session
- */
-function destroySession(token) {
-  sessions.delete(token)
-}
-
-/**
- * Update session activity
- */
-function updateSessionActivity(token) {
-  if (sessions.has(token)) {
-    sessions.get(token).lastActivity = Date.now()
-  }
+function updateSessionActivity(_token) {
+  // Stateless — expiry is encoded in the token itself; no mutable store to update.
 }
 
 /**

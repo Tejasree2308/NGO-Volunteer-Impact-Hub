@@ -1,9 +1,13 @@
 // Vercel serverless proxy — forwards all /api/* requests → ServiceNow PDI
 // Handles GET, POST, PATCH, DELETE with Basic Auth injected server-side.
 export default async function handler(req, res) {
-  const snInstance = process.env.VITE_SN_INSTANCE || 'https://dev286774.service-now.com'
-  const snUsername = process.env.VITE_SN_USERNAME || 'admin'
-  const snPassword = process.env.VITE_SN_PASSWORD || 'p/rLsoR41AV^'
+  const snInstance = process.env.VITE_SN_INSTANCE
+  const snUsername = process.env.VITE_SN_USERNAME
+  const snPassword = process.env.VITE_SN_PASSWORD
+
+  if (!snInstance || !snUsername || !snPassword) {
+    return res.status(500).json({ error: 'Server misconfiguration: ServiceNow environment variables are not set.' })
+  }
 
   // path = ['now', 'table', 'x_2048396_...'] → 'now/table/x_2048396_...'
   const { path, ...queryParams } = req.query
