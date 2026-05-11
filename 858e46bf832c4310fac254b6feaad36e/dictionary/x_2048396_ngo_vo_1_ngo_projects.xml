@@ -1,3 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?><database>
-    <element db_object_id="ce2ec75083f08710fac254b6feaad377" extends="task" label="NGO Projects" max_length="40" name="x_2048396_ngo_vo_1_ngo_projects" type="collection"/>
+    <element db_object_id="ce2ec75083f08710fac254b6feaad377" extends="task" label="NGO Projects" max_length="40" name="x_2048396_ngo_vo_1_ngo_projects" type="collection">
+        <element label="Location" max_length="100" name="u_location" type="string"/>
+        <element label="Status" max_length="50" name="u_status" type="string"/>
+        <element label="End Date" max_length="40" name="u_end_date" type="glide_date"/>
+        <element label="Required Skills" max_length="200" name="u_required_skills" type="string"/>
+        <element label="Project Name" max_length="100" name="u_project_name" type="string"/>
+        <element label="Volunteers Needed" max_length="40" name="u_integer_10" type="integer"/>
+        <element attributes="edge_encryption_enabled=true" label="Project Name" max_length="40" name="u_string_1" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Description" max_length="40" name="u_string_2" type="string"/>
+        <element label="Description" max_length="500" name="u_description" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Location" max_length="40" name="u_string_3" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="End Date" max_length="40" name="u_glide_date_8" type="glide_date"/>
+        <element attributes="edge_encryption_enabled=true" choice="1" label="Status" max_length="40" name="u_choice_9" type="string">
+            <choice>
+                <element inactive_on_update="false" label="Choice 3" sequence="2" value="Choice 3"/>
+                <element inactive_on_update="false" label="Choice 1" sequence="0" value="Choice 1"/>
+                <element inactive_on_update="false" label="Choice 2" sequence="1" value="Choice 2"/>
+            </choice>
+        </element>
+        <element attributes="edge_encryption_enabled=true" label="Start Date" max_length="40" name="u_glide_date_7" type="glide_date"/>
+        <element label="Volunteers Needed" max_length="40" name="u_volunteers_needed" type="integer"/>
+        <element label="Start Date" max_length="40" name="u_start_date" type="glide_date"/>
+        <element attributes="edge_encryption_enabled=true" choice="1" label="Required Skills" max_length="40" name="u_string_4" type="string">
+            <choice>
+                <element inactive_on_update="false" label="Environment" sequence="6" value="environment"/>
+                <element inactive_on_update="false" label="IT Support" sequence="2" value="it support"/>
+                <element inactive_on_update="false" label="Legal Aid" sequence="10" value="legal aid"/>
+                <element inactive_on_update="false" label="Counseling" sequence="5" value="counseling"/>
+                <element inactive_on_update="false" label="First Aid" sequence="1" value="first aid"/>
+                <element inactive_on_update="false" label="Community" sequence="9" value="community"/>
+                <element inactive_on_update="false" label="Teaching" sequence="0" value="teaching"/>
+                <element inactive_on_update="false" label="HealthCare" sequence="4" value="healthcare"/>
+                <element inactive_on_update="false" label="Social Work" sequence="8" value="social work"/>
+                <element inactive_on_update="false" label="Data Entry" sequence="3" value="data entry"/>
+                <element inactive_on_update="false" label="Advocacy" sequence="11" value="advocacy"/>
+                <element inactive_on_update="false" label="Planting" sequence="7" value="planting"/>
+            </choice>
+        </element>
+    </element>
 </database>

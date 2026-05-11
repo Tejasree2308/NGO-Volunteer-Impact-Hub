@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element attributes="all_tables.text_index_translations=true,allow_data_replicate=true,display_image=photo,global_search_config_handler=UserConfig,ih_process_sync_enabled=true,iterativeDelete=true,kagami_csindex_enabled=true,metadata_link_exempt=true,ref_ac_columns=email,ref_ac_columns_search=true,ref_ac_order_by=name,ref_auto_completer=AJAXTableCompleter,slushbucket_omit_embedded=true" create_roles="user_admin" db_object_id="e03bea02183232108bb255f46a373ab3" defaultsort="-1" dynamic_creation_script="dynamicUserCreation(current, value);" label="User" max_length="40" name="sys_user" text_index="true" type="collection">
+        <element label="Availability" max_length="50" name="x_2048396_ngo_vo_1_u_availability" type="string"/>
+        <element label="Is Volunteer" max_length="40" name="x_2048396_ngo_vo_1_u_is_volunteer" type="boolean"/>
+        <element label="Skills" max_length="200" name="x_2048396_ngo_vo_1_u_skills" type="string"/>
+        <element label="Approval Status" max_length="50" name="x_2048396_ngo_vo_1_u_approval_status" type="string"/>
+        <element label="Address" max_length="300" name="x_2048396_ngo_vo_1_u_address" type="string"/>
+    </element>
+</database>

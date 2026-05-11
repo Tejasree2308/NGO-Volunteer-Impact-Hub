@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="fe27ced583f04310fac254b6feaad3e2" extends="task" label="Event Registrations" max_length="40" name="x_2048396_ngo_vo_1_event_registrations" type="collection">
+        <element label="Volunteer" max_length="100" name="volunteer" type="string"/>
+        <element label="Event" max_length="100" name="event" type="string"/>
+        <element label="Registration Date" max_length="40" name="registration_date" type="glide_date"/>
+        <element label="Status" max_length="50" name="status" type="string"/>
+    </element>
+</database>

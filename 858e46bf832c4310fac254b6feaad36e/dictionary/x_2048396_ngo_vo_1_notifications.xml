@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="8727461983f04310fac254b6feaad33d" extends="task" label="Notifications" max_length="40" name="x_2048396_ngo_vo_1_notifications" type="collection">
+        <element label="Created On" max_length="40" name="created_on" type="glide_date_time"/>
+        <element label="Message" max_length="1000" name="message" type="string"/>
+        <element label="Type" max_length="50" name="type" type="string"/>
+        <element label="Recipient" max_length="100" name="recipient" type="string"/>
+        <element label="Is Read" max_length="40" name="is_read" type="boolean"/>
+    </element>
+</database>

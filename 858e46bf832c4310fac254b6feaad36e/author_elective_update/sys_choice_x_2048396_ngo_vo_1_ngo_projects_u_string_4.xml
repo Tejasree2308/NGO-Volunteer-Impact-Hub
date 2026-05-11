@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_choice action="INSERT_OR_UPDATE" field="u_string_4" table="x_2048396_ngo_vo_1_ngo_projects" version="3">
+        <sys_choice_set action="INSERT_OR_UPDATE">
+            <element>u_string_4</element>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sys_class_name>sys_choice_set</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:16</sys_created_on>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>u_string_4</sys_name>
+            <sys_package display_value="NGO volunteer Impact Hub" source="x_2048396_ngo_vo_1">858e46bf832c4310fac254b6feaad36e</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="NGO volunteer Impact Hub">858e46bf832c4310fac254b6feaad36e</sys_scope>
+            <sys_update_name>sys_choice_x_2048396_ngo_vo_1_ngo_projects_u_string_4</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:16</sys_updated_on>
+        </sys_choice_set>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Teaching</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>0</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:16</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:16</sys_updated_on>
+            <value>teaching</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>First Aid</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>1</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:16</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:16</sys_updated_on>
+            <value>first aid</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>IT Support</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>2</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:16</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:16</sys_updated_on>
+            <value>it support</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Data Entry</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>3</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:16</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:16</sys_updated_on>
+            <value>data entry</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>HealthCare</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>4</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:16</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:16</sys_updated_on>
+            <value>healthcare</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Counseling</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>5</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>counseling</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Environment</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>6</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>environment</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Planting</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>7</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>planting</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Social Work</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>8</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>social work</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Community</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>9</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>community</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Legal Aid</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>10</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>legal aid</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_string_4</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Advocacy</label>
+            <language>en</language>
+            <name>x_2048396_ngo_vo_1_ngo_projects</name>
+            <sequence>11</sequence>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-05-10 16:48:17</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-05-10 16:48:17</sys_updated_on>
+            <value>advocacy</value>
+        </sys_choice>
+    </sys_choice>
+</record_update>

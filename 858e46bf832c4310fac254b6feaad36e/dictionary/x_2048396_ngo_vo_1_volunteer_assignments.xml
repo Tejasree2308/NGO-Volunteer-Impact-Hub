@@ -17,6 +17,7 @@
         <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
         <element attributes="edge_encryption_enabled=true" label="Volunteer" max_length="40" name="u_string_1" type="string"/>
         <element label="Assigned Date" max_length="40" name="assigned_date" type="glide_date"/>
+        <element label="Project" max_length="100" name="project" type="string"/>
         <index name="index">
             <element name="volunteer"/>
         </index>

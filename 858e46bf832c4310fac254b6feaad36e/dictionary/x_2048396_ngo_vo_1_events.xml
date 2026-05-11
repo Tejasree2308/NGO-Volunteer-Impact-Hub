@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="58074ed583f04310fac254b6feaad3a5" extends="task" label="Events" max_length="40" name="x_2048396_ngo_vo_1_events" type="collection">
+        <element label="End Time" max_length="10" name="end_time" type="string"/>
+        <element label="Status" max_length="20" name="status" type="string"/>
+        <element label="Registered Count" max_length="40" name="registered_count" type="integer"/>
+        <element label="Event Date" max_length="40" name="event_date" type="glide_date"/>
+        <element label="Event Name" max_length="100" name="event_name" type="string"/>
+        <element label="Max Participants" max_length="40" name="max_participants" type="integer"/>
+        <element label="Required Skills" max_length="200" name="required_skills" type="string"/>
+        <element label="Start Time" max_length="10" name="start_time" type="string"/>
+    </element>
+</database>
