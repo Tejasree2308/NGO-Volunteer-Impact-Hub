@@ -386,6 +386,37 @@
 .skeleton-card.tall { height: 200px; }
 @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
 
+/* ─── Pagination ─────────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 4px 0;
+}
+.pg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s;
+}
+.pg-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
+.pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pg-btn.active { background: linear-gradient(135deg,#10b981,#059669); color: #fff; border-color: transparent; font-weight: 700; }
+.pg-info { font-size: 13px; color: #6b7280; margin-right: 4px; }
+
 /* ─── Toast ───────────────────────────────────────────────────────────────── */
 .page-toast {
   position: fixed;

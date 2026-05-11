@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { getDashboardStats, getProjects, getAssignments } from '../api/servicenow'
+import { getDashboardStats, getProjects, getAssignments, testSnConnection } from '../api/servicenow'
+import Modal from '../components/Modal'
 import './Dashboard.css'
 
 const STAT_CONFIG = [
@@ -14,6 +15,23 @@ export default function Dashboard() {
   const [projects, setProjects] = useState([])
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading]   = useState(true)
+  const [testModal, setTestModal] = useState(false)
+  const [testResults, setTestResults] = useState(null)
+  const [testRunning, setTestRunning] = useState(false)
+
+  async function handleTestConnection() {
+    setTestModal(true)
+    setTestRunning(true)
+    setTestResults(null)
+    try {
+      const results = await testSnConnection()
+      setTestResults(results)
+    } catch (err) {
+      setTestResults({ Error: err.message })
+    } finally {
+      setTestRunning(false)
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -25,7 +43,7 @@ export default function Dashboard() {
           getAssignments(),
         ])
         setStats(s)
-        setProjects(p.slice(0, 5))
+        setProjects(p)
         setAssignments(a.slice(0, 5))
       } catch (err) {
         console.error(err)
@@ -38,6 +56,10 @@ export default function Dashboard() {
 
   if (loading) return <LoadingState />
 
+  const totalProjects = projects.length || stats?.totalProjects || 0
+  const completedProjects = projects.filter(p => p.u_status === 'completed').length
+  const completionPct = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0
+
   return (
     <div className="page-wrapper">
       <div className="page-header">
@@ -45,9 +67,15 @@ export default function Dashboard() {
           <h1 className="page-title">Dashboard</h1>
           <p className="page-sub">Real-time overview of your NGO volunteer operations</p>
         </div>
-        <div className="sn-status-chip">
-          <span className="status-dot pulse"/>
-          <span>ServiceNow PDI Live</span>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="btn-secondary" onClick={handleTestConnection}
+            style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: '8px' }}>
+            🔍 Test SN Connection
+          </button>
+          <div className="sn-status-chip">
+            <span className="status-dot pulse"/>
+            <span>ServiceNow PDI</span>
+          </div>
         </div>
       </div>
 
@@ -62,6 +90,19 @@ export default function Dashboard() {
             icon={cfg.icon}
           />
         ))}
+        <div className="stat-card stat-green" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div className="stat-icon"><IconTarget /></div>
+          <div className="stat-body">
+            <span className="stat-val">{completionPct}%</span>
+            <span className="stat-label">Project Completion</span>
+          </div>
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, height: '4px',
+            width: `${completionPct}%`, background: 'rgba(255,255,255,0.5)',
+            borderRadius: '0 2px 2px 0', transition: 'width 0.6s ease',
+          }} />
+          <div className="stat-glow"/>
+        </div>
       </div>
 
       {/* Two-column layout */}
@@ -70,10 +111,10 @@ export default function Dashboard() {
         <div className="dash-card">
           <div className="dash-card-header">
             <h2>Recent Projects</h2>
-            <span className="badge badge-teal">{projects.length} shown</span>
+            <span className="badge badge-teal">{Math.min(projects.length, 5)} of {projects.length}</span>
           </div>
           <div className="project-list">
-            {projects.map(p => (
+            {projects.slice(0, 5).map(p => (
               <div key={p.sys_id} className="proj-row">
                 <div className="proj-dot" data-status={p.u_status || 'planning'}/>
                 <div className="proj-info">
@@ -109,6 +150,55 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* SN Connection Test Modal */}
+      <Modal isOpen={testModal} onClose={() => setTestModal(false)} title="ServiceNow Connection Test" size="md">
+        {testRunning ? (
+          <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-light)' }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: '12px' }}>Testing connections…</div>
+            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+              {[0,1,2].map(i => <span key={i} className="btn-spinner" style={{ animationDelay: `${i*0.15}s` }}/>)}
+            </div>
+          </div>
+        ) : testResults ? (
+          <div>
+            <p style={{ marginBottom: '16px', color: 'var(--text-light)', fontSize: '0.85rem' }}>
+              Results from <strong>dev286774.service-now.com</strong>. Green = table exists and is accessible. Red = table missing or permission denied.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.entries(testResults).map(([label, status]) => {
+                const ok = status === 'connected'
+                return (
+                  <div key={label} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 14px', borderRadius: '8px',
+                    background: ok ? '#f0fdf4' : '#fef2f2',
+                    border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}`,
+                  }}>
+                    <span style={{ fontWeight: 500, color: ok ? '#166534' : '#991b1b', fontSize: '0.88rem' }}>{label}</span>
+                    <span style={{
+                      fontSize: '0.78rem', fontWeight: 600,
+                      color: ok ? '#16a34a' : '#dc2626',
+                      background: ok ? '#dcfce7' : '#fee2e2',
+                      padding: '2px 10px', borderRadius: '20px',
+                    }}>
+                      {ok ? '✓ Connected' : status === 'unreachable' ? '✗ Unreachable' : '✗ Not Found'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            {Object.values(testResults).some(s => s !== 'connected') && (
+              <p style={{ marginTop: '16px', fontSize: '0.8rem', color: '#92400e', background: '#fffbeb', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                ⚠ Tables showing errors need to be created in App Engine Studio with the exact field names listed in the project documentation.
+              </p>
+            )}
+            <div className="modal-actions" style={{ marginTop: '16px' }}>
+              <button className="btn-primary" onClick={() => setTestModal(false)}>Close</button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* Impact Meter */}
       <div className="impact-banner">
@@ -186,4 +276,7 @@ function IconClock() {
 }
 function IconHeart() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+}
+function IconTarget() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
 }

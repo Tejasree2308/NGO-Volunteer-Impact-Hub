@@ -20,6 +20,17 @@ const BASE = '/api/now/table'
 // Once we detect SN is unreachable, skip all future calls immediately
 let snReachable = true
 
+// Exported reactive state — imported by SNStatusBanner to show connection health
+export const snConnectionState = { mode: 'checking' } // 'live' | 'demo' | 'unreachable' | 'checking'
+
+// Helper for write operation catch blocks: fall back silently in demo mode, throw in live mode
+function writeFallback(err, demoResult) {
+  if (err.message.includes('unreachable') || snConnectionState.mode === 'demo') {
+    return { ...demoResult, _isDemo: true }
+  }
+  throw err
+}
+
 // ─── Build auth header ─────────────────────────────────────────────────────
 const authHeader = () => {
   const user = import.meta.env.VITE_SN_USERNAME || 'admin'
@@ -58,12 +69,14 @@ async function snFetch(path, options = {}) {
       throw new Error(`ServiceNow API error: ${res.status} ${res.statusText} — ${errText}`)
     }
     snReachable = true
+    snConnectionState.mode = 'live'
     return res.json()
   } catch (err) {
     clearTimeout(timer)
     if (err.name === 'AbortError' || err.message.includes('fetch')) {
       // Only mark unreachable on genuine network failures
       snReachable = false
+      snConnectionState.mode = 'unreachable'
       throw new Error('ServiceNow PDI unreachable (network error). Running in demo mode.')
     }
     throw err   // re-throw HTTP errors as-is
@@ -171,33 +184,43 @@ export async function authenticateUser(email, password) {
   try {
     const query = `email=${encodeURIComponent(email)}`
     const data = await snFetch(
-      `/sys_user?sysparm_query=${query}&sysparm_fields=sys_id,name,email,roles,user_name,u_is_volunteer&sysparm_limit=1`
+      `/sys_user?sysparm_query=${query}&sysparm_fields=sys_id,name,email,roles,user_name,${SN_VOL_IS_VOLUNTEER},active,${SN_VOL_APPROVAL}&sysparm_limit=1`
     )
     const users = data.result || []
     if (users.length > 0) {
+      const snRec = users[0]
+      const isVol = snRec[SN_VOL_IS_VOLUNTEER] === 'true' || snRec[SN_VOL_IS_VOLUNTEER] === true
+      const approvalStatus = snRec[SN_VOL_APPROVAL] || 'pending'
+      if (isVol && (snRec.active === 'false' || snRec.active === false)) {
+        if (approvalStatus === 'rejected') throw new Error('Your registration has been rejected. Please contact the NGO coordinator.')
+        throw new Error('Your account is pending approval. Please wait for the coordinator to approve your registration.')
+      }
       const user = {
-        sys_id: users[0].sys_id,
-        name: users[0].name || 'User',
-        email: users[0].email,
-        user_name: users[0].user_name,
-        role: users[0].u_is_volunteer === 'true' ? 'volunteer' : 'admin',
+        sys_id: snRec.sys_id,
+        name: snRec.name || 'User',
+        email: snRec.email,
+        user_name: snRec.user_name,
+        role: isVol ? 'volunteer' : 'admin',
         connected: true
       }
       const token = createSession(user)
       return { ...user, token }
     }
   } catch (err) {
+    if (err.message.includes('pending') || err.message.includes('rejected')) throw err
     console.warn('SN Auth failed:', err.message)
   }
 
   // ─── Demo fallback ────────────────────────────────────────────────────────
   if (email === 'admin@ngo.org' && password === 'admin456') {
+    snConnectionState.mode = 'demo'
     const user = { sys_id: 'demo-001', name: 'Admin User', email, user_name: 'admin', role: 'admin' }
     const token = createSession(user)
     return { ...user, token }
   }
 
   if (email === 'volunteer@ngo.org' && password === 'volunteer123') {
+    snConnectionState.mode = 'demo'
     const user = { sys_id: 'demo-002', name: 'Volunteer User', email, user_name: 'volunteer', role: 'volunteer' }
     const token = createSession(user)
     return { ...user, token }
@@ -238,14 +261,25 @@ export function getCurrentUser(token) {
 // VOLUNTEERS  (sys_user table filtered to volunteer role)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const VOLUNTEER_FIELDS = 'sys_id,name,email,mobile_phone,u_skills,u_availability,u_address,active'
+const SN_VOL_IS_VOLUNTEER    = 'x_2048396_ngo_vo_1_u_is_volunteer'
+const SN_VOL_APPROVAL        = 'x_2048396_ngo_vo_1_u_approval_status'
+const SN_VOL_SKILLS          = 'x_2048396_ngo_vo_1_u_skills'
+const SN_VOL_AVAILABILITY    = 'x_2048396_ngo_vo_1_u_availability'
+const SN_VOL_ADDRESS         = 'x_2048396_ngo_vo_1_u_address'
+
+const VOLUNTEER_FIELDS = `sys_id,name,email,mobile_phone,${SN_VOL_SKILLS},${SN_VOL_AVAILABILITY},${SN_VOL_ADDRESS},active`
 
 export async function getVolunteers() {
   try {
     const data = await snFetch(
-      `/sys_user?sysparm_query=u_is_volunteer=true^active=true&sysparm_fields=${VOLUNTEER_FIELDS}&sysparm_limit=50`
+      `/sys_user?sysparm_query=${SN_VOL_IS_VOLUNTEER}=true^active=true&sysparm_fields=${VOLUNTEER_FIELDS}&sysparm_limit=50`
     )
-    return data.result || []
+    return (data.result || []).map(r => ({
+      ...r,
+      u_skills:       r[SN_VOL_SKILLS]       || r.u_skills       || '',
+      u_availability: r[SN_VOL_AVAILABILITY] || r.u_availability || '',
+      u_address:      r[SN_VOL_ADDRESS]       || r.u_address       || '',
+    }))
   } catch {
     return DEMO_VOLUNTEERS
   }
@@ -255,46 +289,118 @@ export async function createVolunteer(payload) {
   try {
     const data = await snFetch('/sys_user', {
       method: 'POST',
-      body: JSON.stringify({ ...payload, u_is_volunteer: 'true', active: 'true' }),
+      body: JSON.stringify({
+        name:                     payload.name,
+        email:                    payload.email,
+        mobile_phone:             payload.mobile_phone,
+        user_password:            payload.user_password,
+        [SN_VOL_IS_VOLUNTEER]:   'true',
+        [SN_VOL_APPROVAL]:       payload.u_approval_status || 'pending',
+        [SN_VOL_SKILLS]:         payload.u_skills || '',
+        [SN_VOL_AVAILABILITY]:   payload.u_availability || '',
+        [SN_VOL_ADDRESS]:        payload.u_address || '',
+        active:                   'false',
+      }),
     })
     return data.result
-  } catch {
-    // Demo mode: return a mock record
-    return { sys_id: `demo-${Date.now()}`, ...payload }
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-${Date.now()}`, ...payload })
   }
 }
 
 export async function updateVolunteer(sysId, payload) {
   try {
+    const snPayload = {
+      name:                   payload.name,
+      email:                  payload.email,
+      mobile_phone:           payload.mobile_phone,
+      [SN_VOL_SKILLS]:       payload.u_skills       || payload[SN_VOL_SKILLS]       || '',
+      [SN_VOL_AVAILABILITY]: payload.u_availability || payload[SN_VOL_AVAILABILITY] || '',
+      [SN_VOL_ADDRESS]:      payload.u_address       || payload[SN_VOL_ADDRESS]       || '',
+    }
     const data = await snFetch(`/sys_user/${sysId}`, {
       method: 'PATCH',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(snPayload),
     })
     return data.result
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, ...payload })
+  }
+}
+
+export async function getPendingVolunteers() {
+  try {
+    const data = await snFetch(
+      `/sys_user?sysparm_query=${SN_VOL_IS_VOLUNTEER}=true^active=false^${SN_VOL_APPROVAL}=pending&sysparm_fields=${VOLUNTEER_FIELDS},${SN_VOL_APPROVAL}&sysparm_limit=50`
+    )
+    return (data.result || []).map(r => ({
+      ...r,
+      u_skills:          r[SN_VOL_SKILLS]       || '',
+      u_availability:    r[SN_VOL_AVAILABILITY] || '',
+      u_address:         r[SN_VOL_ADDRESS]       || '',
+      u_approval_status: r[SN_VOL_APPROVAL]      || 'pending',
+    }))
   } catch {
-    return { sys_id: sysId, ...payload }
+    return DEMO_PENDING_VOLUNTEERS
+  }
+}
+
+export async function approveVolunteer(sysId) {
+  try {
+    const data = await snFetch(`/sys_user/${sysId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active: 'true', [SN_VOL_APPROVAL]: 'approved' }),
+    })
+    return data.result
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, active: 'true', u_approval_status: 'approved' })
+  }
+}
+
+export async function rejectVolunteer(sysId) {
+  try {
+    const data = await snFetch(`/sys_user/${sysId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active: 'false', [SN_VOL_APPROVAL]: 'rejected' }),
+    })
+    return data.result
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, active: 'false', u_approval_status: 'rejected' })
+  }
+}
+
+export async function getMyAssignments(volunteerSysId) {
+  try {
+    const data = await snFetch(
+      `/${SN_TABLE_ASSIGNMENTS}?sysparm_query=volunteer=${volunteerSysId}&sysparm_fields=sys_id,volunteer,project,assigned_date,hours_worked,completion_status&sysparm_limit=50`
+    )
+    return (data.result || []).map(mapAssignment)
+  } catch {
+    return DEMO_ASSIGNMENTS.filter(a => a.u_volunteer === volunteerSysId)
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// NGO PROJECTS  → x_2048396_ngo_vo_1_ngo_project_details
+// NGO PROJECTS  → x_2048396_ngo_vo_1_ngo_projects
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SN_TABLE_PROJECTS = 'x_2048396_ngo_vo_1_ngo_project_details'
-const PROJECT_FIELDS = 'sys_id,event_name,description,location,start_date,end_date,required_skills,status,number'
+const SN_TABLE_PROJECTS = 'x_2048396_ngo_vo_1_ngo_projects'
+const PROJECT_FIELDS = 'sys_id,u_project_name,u_description,u_location,u_start_date,u_end_date,u_required_skills,u_status,u_volunteers_needed'
 
 // Map SN fields → app fields (u_ prefix used in UI components)
+const safeStr = (v) => v && typeof v === 'object' ? (v.display_value || v.value || '') : (v || '');
+
 function mapProject(r) {
   return {
     sys_id:              r.sys_id,
-    u_project_name:      r.event_name   || r.u_project_name || '',
-    u_description:       r.description  || r.u_description  || '',
-    u_location:          r.location     || r.u_location     || '',
-    u_start_date:        r.start_date   || r.u_start_date   || '',
-    u_end_date:          r.end_date     || r.u_end_date     || '',
-    u_required_skills:   r.required_skills || r.u_required_skills || '',
-    u_status:            r.status       || r.u_status       || 'planning',
-    u_volunteers_needed: r.number       || r.u_volunteers_needed || '',
+    u_project_name:      safeStr(r.u_project_name) || 'Unnamed Project',
+    u_description:       safeStr(r.u_description),
+    u_location:          safeStr(r.u_location) || 'Location TBD',
+    u_start_date:        safeStr(r.u_start_date).split(' ')[0],
+    u_end_date:          safeStr(r.u_end_date).split(' ')[0],
+    u_required_skills:   safeStr(r.u_required_skills) || 'General Volunteer',
+    u_status:            safeStr(r.u_status) || 'planning',
+    u_volunteers_needed: safeStr(r.u_volunteers_needed) || '10',
   }
 }
 
@@ -309,24 +415,56 @@ export async function getProjects() {
   }
 }
 
+export async function updateProject(sysId, payload) {
+  try {
+    const snPayload = {
+      u_project_name:      payload.u_project_name,
+      u_description:       payload.u_description,
+      u_location:          payload.u_location,
+      u_start_date:        payload.u_start_date,
+      u_end_date:          payload.u_end_date,
+      u_required_skills:   payload.u_required_skills,
+      u_status:            payload.u_status,
+      u_volunteers_needed: payload.u_volunteers_needed || '10',
+    }
+    const data = await snFetch(`/${SN_TABLE_PROJECTS}/${sysId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(snPayload),
+    })
+    return mapProject(data.result)
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, ...payload })
+  }
+}
+
+export async function deleteProject(sysId) {
+  try {
+    await snFetch(`/${SN_TABLE_PROJECTS}/${sysId}`, { method: 'DELETE' })
+    return true
+  } catch {
+    return true
+  }
+}
+
 export async function createProject(payload) {
   try {
     const snPayload = {
-      event_name:      payload.u_project_name,
-      description:     payload.u_description,
-      location:        payload.u_location,
-      start_date:      payload.u_start_date,
-      end_date:        payload.u_end_date,
-      required_skills: payload.u_required_skills,
-      status:          payload.u_status,
+      u_project_name:      payload.u_project_name,
+      u_description:       payload.u_description,
+      u_location:          payload.u_location,
+      u_start_date:        payload.u_start_date,
+      u_end_date:          payload.u_end_date,
+      u_required_skills:   payload.u_required_skills,
+      u_status:            payload.u_status,
+      u_volunteers_needed: payload.u_volunteers_needed || '10',
     }
     const data = await snFetch(`/${SN_TABLE_PROJECTS}`, {
       method: 'POST',
       body: JSON.stringify(snPayload),
     })
     return mapProject(data.result)
-  } catch {
-    return { sys_id: `demo-proj-${Date.now()}`, ...payload }
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-proj-${Date.now()}`, ...payload })
   }
 }
 
@@ -339,11 +477,11 @@ const SN_TABLE_ASSIGNMENTS = 'x_2048396_ngo_vo_1_volunteer_assignments'
 function mapAssignment(r) {
   return {
     sys_id:               r.sys_id,
-    u_volunteer:          r.volunteer          || r.u_volunteer          || '',
-    u_project:            r.project            || r.u_project            || '',
-    u_assigned_date:      r.assigned_date      || r.u_assigned_date      || '',
-    u_hours_worked:       r.hours_worked       || r.u_hours_worked       || '0',
-    u_completion_status:  r.completion_status  || r.u_completion_status  || 'pending',
+    u_volunteer:          safeStr(r.volunteer          || r.u_volunteer),
+    u_project:            safeStr(r.project            || r.u_project),
+    u_assigned_date:      safeStr(r.assigned_date      || r.u_assigned_date),
+    u_hours_worked:       safeStr(r.hours_worked       || r.u_hours_worked       || '0'),
+    u_completion_status:  safeStr(r.completion_status  || r.u_completion_status  || 'pending'),
   }
 }
 
@@ -371,9 +509,37 @@ export async function createAssignment(payload) {
       method: 'POST',
       body: JSON.stringify(snPayload),
     })
+    const result = mapAssignment(data.result)
+    return result
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-asgn-${Date.now()}`, ...payload })
+  }
+}
+
+export async function updateAssignment(sysId, payload) {
+  try {
+    const data = await snFetch(`/${SN_TABLE_ASSIGNMENTS}/${sysId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        volunteer:         payload.u_volunteer,
+        project:           payload.u_project,
+        assigned_date:     payload.u_assigned_date,
+        hours_worked:      payload.u_hours_worked,
+        completion_status: payload.u_completion_status,
+      }),
+    })
     return mapAssignment(data.result)
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, ...payload })
+  }
+}
+
+export async function deleteAssignment(sysId) {
+  try {
+    await snFetch(`/${SN_TABLE_ASSIGNMENTS}/${sysId}`, { method: 'DELETE' })
+    return true
   } catch {
-    return { sys_id: `demo-asgn-${Date.now()}`, ...payload }
+    return true
   }
 }
 
@@ -384,8 +550,8 @@ export async function updateAssignmentHours(sysId, hours) {
       body: JSON.stringify({ hours_worked: hours }),
     })
     return mapAssignment(data.result)
-  } catch {
-    return { sys_id: sysId, u_hours_worked: hours }
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, u_hours_worked: hours })
   }
 }
 
@@ -398,18 +564,18 @@ const SN_TABLE_IMPACT = 'x_2048396_ngo_vo_1_impact_report'
 function mapReport(r) {
   return {
     sys_id:                  r.sys_id,
-    u_project:               r.project               || r.u_project               || '',
-    u_volunteers_involved:   r.volunteers_involved   || r.u_volunteers_involved   || '0',
-    u_total_hours:           r.total_hours           || r.u_total_hours           || '0',
-    u_beneficiaries_reached: r.beneficiaries_reached || r.u_beneficiaries_reached || '0',
-    u_outcome_summary:       r.outcome_summary       || r.u_outcome_summary       || '',
+    u_project:               safeStr(r.u_project),
+    u_volunteers_involved:   safeStr(r.u_volunteers_involved   || '0'),
+    u_total_hours:           safeStr(r.u_total_hours           || '0'),
+    u_beneficiaries_reached: safeStr(r.u_beneficiaries_reached || '0'),
+    u_outcome_summary:       safeStr(r.u_outcome_summary),
   }
 }
 
 export async function getImpactReports() {
   try {
     const data = await snFetch(
-      `/${SN_TABLE_IMPACT}?sysparm_fields=sys_id,project,volunteers_involved,total_hours,beneficiaries_reached,outcome_summary&sysparm_limit=50`
+      `/${SN_TABLE_IMPACT}?sysparm_fields=sys_id,u_project,u_volunteers_involved,u_total_hours,u_beneficiaries_reached,u_outcome_summary&sysparm_limit=50`
     )
     return (data.result || []).map(mapReport)
   } catch {
@@ -417,22 +583,31 @@ export async function getImpactReports() {
   }
 }
 
+export async function deleteImpactReport(sysId) {
+  try {
+    await snFetch(`/${SN_TABLE_IMPACT}/${sysId}`, { method: 'DELETE' })
+    return true
+  } catch {
+    return true
+  }
+}
+
 export async function createImpactReport(payload) {
   try {
     const snPayload = {
-      project:               payload.u_project,
-      volunteers_involved:   payload.u_volunteers_involved,
-      total_hours:           payload.u_total_hours,
-      beneficiaries_reached: payload.u_beneficiaries_reached,
-      outcome_summary:       payload.u_outcome_summary,
+      u_project:               payload.u_project,
+      u_volunteers_involved:   payload.u_volunteers_involved,
+      u_total_hours:           payload.u_total_hours,
+      u_beneficiaries_reached: payload.u_beneficiaries_reached,
+      u_outcome_summary:       payload.u_outcome_summary,
     }
     const data = await snFetch(`/${SN_TABLE_IMPACT}`, {
       method: 'POST',
       body: JSON.stringify(snPayload),
     })
     return mapReport(data.result)
-  } catch {
-    return { sys_id: `demo-rep-${Date.now()}`, ...payload }
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-rep-${Date.now()}`, ...payload })
   }
 }
 
@@ -445,16 +620,16 @@ const SN_TABLE_EVENTS = 'x_2048396_ngo_vo_1_events'
 function mapEvent(r) {
   return {
     sys_id:                  r.sys_id,
-    u_event_name:            r.event_name            || r.u_event_name            || '',
-    u_description:           r.description           || r.u_description           || '',
-    u_location:              r.location              || r.u_location              || '',
-    u_event_date:            r.event_date            || r.u_event_date            || '',
-    u_start_time:            r.start_time            || r.u_start_time            || '',
-    u_end_time:              r.end_time              || r.u_end_time              || '',
-    u_required_skills:       r.required_skills       || r.u_required_skills       || '',
-    u_max_participants:      r.max_participants      || r.u_max_participants      || '',
-    u_status:                r.status                || r.u_status                || 'open',
-    u_registered_count:      r.registered_count      || r.u_registered_count      || '0',
+    u_event_name:            safeStr(r.event_name            || r.u_event_name),
+    u_description:           safeStr(r.description           || r.u_description),
+    u_location:              safeStr(r.location              || r.u_location),
+    u_event_date:            safeStr(r.event_date            || r.u_event_date),
+    u_start_time:            safeStr(r.start_time            || r.u_start_time),
+    u_end_time:              safeStr(r.end_time              || r.u_end_time),
+    u_required_skills:       safeStr(r.required_skills       || r.u_required_skills),
+    u_max_participants:      safeStr(r.max_participants      || r.u_max_participants),
+    u_status:                safeStr(r.status                || r.u_status                || 'open'),
+    u_registered_count:      safeStr(r.registered_count      || r.u_registered_count      || '0'),
   }
 }
 
@@ -488,8 +663,8 @@ export async function createEvent(payload) {
       body: JSON.stringify(snPayload),
     })
     return mapEvent(data.result)
-  } catch {
-    return { sys_id: `demo-event-${Date.now()}`, ...payload, u_registered_count: '0' }
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-event-${Date.now()}`, ...payload, u_registered_count: '0' })
   }
 }
 
@@ -511,8 +686,8 @@ export async function updateEvent(sysId, payload) {
       body: JSON.stringify(snPayload),
     })
     return mapEvent(data.result)
-  } catch {
-    return { sys_id: sysId, ...payload }
+  } catch (err) {
+    return writeFallback(err, { sys_id: sysId, ...payload })
   }
 }
 
@@ -536,21 +711,18 @@ const SN_TABLE_REGISTRATIONS = 'x_2048396_ngo_vo_1_event_registrations'
 function mapRegistration(r) {
   return {
     sys_id:              r.sys_id,
-    u_volunteer:         r.volunteer         || r.u_volunteer         || '',
-    u_event:             r.event             || r.u_event             || '',
-    u_registration_date: r.registration_date || r.u_registration_date || '',
-    u_status:            r.status            || r.u_status            || 'registered',
+    u_volunteer:         safeStr(r.volunteer         || r.u_volunteer),
+    u_event:             safeStr(r.event             || r.u_event),
+    u_registration_date: safeStr(r.registration_date || r.u_registration_date),
+    u_status:            safeStr(r.status            || r.u_status            || 'registered'),
   }
 }
 
 export async function getEventRegistrations(volunteerSysId = null) {
   try {
-    let query = ''
-    if (volunteerSysId) {
-      query = `?sysparm_query=volunteer=${volunteerSysId}`
-    }
+    const queryPart = volunteerSysId ? `?sysparm_query=volunteer=${volunteerSysId}&` : '?'
     const data = await snFetch(
-      `/${SN_TABLE_REGISTRATIONS}${query}&sysparm_fields=sys_id,volunteer,event,registration_date,status&sysparm_limit=100`
+      `/${SN_TABLE_REGISTRATIONS}${queryPart}sysparm_fields=sys_id,volunteer,event,registration_date,status&sysparm_limit=100`
     )
     return (data.result || []).map(mapRegistration)
   } catch {
@@ -571,8 +743,8 @@ export async function registerForEvent(volunteerSysId, eventSysId) {
       body: JSON.stringify(snPayload),
     })
     return mapRegistration(data.result)
-  } catch {
-    return { sys_id: `demo-reg-${Date.now()}`, u_volunteer: volunteerSysId, u_event: eventSysId, u_registration_date: new Date().toISOString().split('T')[0], u_status: 'registered' }
+  } catch (err) {
+    return writeFallback(err, { sys_id: `demo-reg-${Date.now()}`, u_volunteer: volunteerSysId, u_event: eventSysId, u_registration_date: new Date().toISOString().split('T')[0], u_status: 'registered' })
   }
 }
 
@@ -610,6 +782,67 @@ export async function getAvailableEvents(volunteerSysId) {
       !registeredEventIds.includes(event.sys_id) &&
       (!event.u_max_participants || parseInt(event.u_registered_count) < parseInt(event.u_max_participants))
     )
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS  → x_2048396_ngo_vo_1_notifications
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SN_TABLE_NOTIFICATIONS = 'x_2048396_ngo_vo_1_notifications'
+
+function mapNotification(r) {
+  return {
+    sys_id:      r.sys_id,
+    u_recipient: typeof r.recipient === 'object' ? (r.recipient.value || '') : (r.recipient || r.u_recipient || ''),
+    u_message:   safeStr(r.message   || r.u_message),
+    u_type:      safeStr(r.type      || r.u_type      || 'general'),
+    u_is_read:   r.is_read === 'true' || r.is_read === true || r.u_is_read === 'true',
+    u_created_on: safeStr(r.created_on || r.u_created_on || r.sys_created_on),
+  }
+}
+
+export async function getNotifications(userSysId) {
+  try {
+    const query = userSysId
+      ? `recipient=${userSysId}^ORDERBYDESCsys_created_on`
+      : 'ORDERBYDESCsys_created_on'
+    const data = await snFetch(
+      `/${SN_TABLE_NOTIFICATIONS}?sysparm_query=${query}&sysparm_fields=sys_id,recipient,message,type,is_read,created_on,sys_created_on&sysparm_limit=50`
+    )
+    return (data.result || []).map(mapNotification)
+  } catch {
+    return DEMO_NOTIFICATIONS.filter(n => !userSysId || n.u_recipient === userSysId)
+  }
+}
+
+export async function markNotificationRead(sysId) {
+  try {
+    await snFetch(`/${SN_TABLE_NOTIFICATIONS}/${sysId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_read: 'true' }),
+    })
+    return true
+  } catch {
+    return true
+  }
+}
+
+export async function createNotification(payload) {
+  try {
+    const data = await snFetch(`/${SN_TABLE_NOTIFICATIONS}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        recipient:   payload.u_recipient,
+        message:     payload.u_message,
+        type:        payload.u_type || 'general',
+        is_read:     'false',
+        created_on:  new Date().toISOString(),
+      }),
+    })
+    return mapNotification(data.result)
+  } catch {
+    return { sys_id: `demo-notif-${Date.now()}`, ...payload, u_is_read: false, u_created_on: new Date().toISOString() }
   }
 }
 
@@ -656,10 +889,37 @@ export async function getDashboardStats() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CONNECTION TEST  (admin diagnostic — checks each table's REST availability)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function testSnConnection() {
+  const tables = [
+    ['sys_user', 'Volunteers (sys_user)'],
+    [SN_TABLE_PROJECTS, 'NGO Projects'],
+    [SN_TABLE_ASSIGNMENTS, 'Volunteer Assignments'],
+    [SN_TABLE_IMPACT, 'Impact Reports'],
+    [SN_TABLE_EVENTS, 'Events'],
+    [SN_TABLE_REGISTRATIONS, 'Event Registrations'],
+    [SN_TABLE_NOTIFICATIONS, 'Notifications'],
+  ]
+  const results = {}
+  for (const [table, label] of tables) {
+    try {
+      await snFetch(`/${table}?sysparm_limit=1`)
+      results[label] = 'connected'
+    } catch (err) {
+      results[label] = err.message.includes('unreachable') ? 'unreachable' : `error: ${err.message.slice(0, 100)}`
+    }
+  }
+  return results
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // DEMO / FALLBACK DATA  (used when PDI is unreachable)
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const DEMO_VOLUNTEERS = [
+  { sys_id: 'demo-002', name: 'Volunteer User', email: 'volunteer@ngo.org', mobile_phone: '9000000001', u_skills: 'Teaching, First Aid', u_availability: 'weekends', active: 'true' },
   { sys_id: 'v1', name: 'Priya Sharma', email: 'priya@example.com', mobile_phone: '9876543210', u_skills: 'Teaching, First Aid', u_availability: 'weekends', active: 'true' },
   { sys_id: 'v2', name: 'Rahul Verma', email: 'rahul@example.com', mobile_phone: '9123456789', u_skills: 'IT Support, Data Entry', u_availability: 'weekdays', active: 'true' },
   { sys_id: 'v3', name: 'Anita Nair', email: 'anita@example.com', mobile_phone: '8765432109', u_skills: 'Healthcare, Counseling', u_availability: 'flexible', active: 'true' },
@@ -683,6 +943,7 @@ export const DEMO_ASSIGNMENTS = [
   { sys_id: 'a4', u_volunteer: 'Anita Nair', u_project: 'Health Check Initiative', u_assigned_date: '2025-07-01', u_hours_worked: '0', u_completion_status: 'pending' },
   { sys_id: 'a5', u_volunteer: 'Deepa Rao', u_project: 'Women Empowerment Workshop', u_assigned_date: '2025-04-01', u_hours_worked: '48', u_completion_status: 'completed' },
   { sys_id: 'a6', u_volunteer: 'Arjun Mehta', u_project: 'Legal Aid Camp', u_assigned_date: '2025-08-01', u_hours_worked: '0', u_completion_status: 'pending' },
+  { sys_id: 'a7', u_volunteer: 'demo-002', u_project: 'Digital Literacy Drive', u_assigned_date: '2026-01-15', u_hours_worked: '12', u_completion_status: 'in_progress' },
 ]
 
 export const DEMO_REPORTS = [
@@ -757,6 +1018,21 @@ export const DEMO_EVENTS = [
     u_status: 'open',
     u_registered_count: '18'
   }
+]
+
+export const DEMO_PENDING_VOLUNTEERS = [
+  { sys_id: 'pv1', name: 'Neha Singh', email: 'neha@example.com', mobile_phone: '9111222333', u_skills: 'Teaching, Social Work', u_availability: 'weekends', active: 'false', u_approval_status: 'pending' },
+  { sys_id: 'pv2', name: 'Rohit Joshi', email: 'rohit@example.com', mobile_phone: '8222333444', u_skills: 'IT Support, Data Entry', u_availability: 'weekdays', active: 'false', u_approval_status: 'pending' },
+]
+
+export const DEMO_NOTIFICATIONS = [
+  // Admin notifications (demo-001)
+  { sys_id: 'n0', u_recipient: 'demo-001', u_message: '2 new volunteer applications are pending your approval.', u_type: 'approval', u_is_read: false, u_created_on: new Date(Date.now() - 3600000).toISOString() },
+  { sys_id: 'n4', u_recipient: 'demo-001', u_message: 'Project "Green Earth Campaign" is nearing its end date (15 Jul 2025).', u_type: 'reminder', u_is_read: true, u_created_on: new Date(Date.now() - 86400000).toISOString() },
+  // Volunteer notifications (demo-002)
+  { sys_id: 'n1', u_recipient: 'demo-002', u_message: 'Your volunteer registration has been approved. Welcome to the team!', u_type: 'approval', u_is_read: false, u_created_on: new Date(Date.now() - 86400000).toISOString() },
+  { sys_id: 'n2', u_recipient: 'demo-002', u_message: 'You have been assigned to the project: Digital Literacy Drive.', u_type: 'assignment', u_is_read: false, u_created_on: new Date(Date.now() - 43200000).toISOString() },
+  { sys_id: 'n3', u_recipient: 'demo-002', u_message: 'You successfully registered for the event: Community Clean-up Drive.', u_type: 'event', u_is_read: true, u_created_on: new Date(Date.now() - 172800000).toISOString() },
 ]
 
 export const DEMO_REGISTRATIONS = [

@@ -241,121 +241,120 @@ export default function EventsPage() {
         onClose={() => { setModalOpen(false); resetForm() }}
         title={editingEvent ? 'Edit Event' : 'Create New Event'}
       >
-        <div className="modal-form">
-          <div className="form-row">
-            <label>Event Name *</label>
+        <div className="form-grid">
+          <div className="form-field span-2">
+            <label className="form-label">Event Name <span className="req">*</span></label>
             <input
               type="text"
               value={form.u_event_name}
               onChange={e => setForm(prev => ({...prev, u_event_name: e.target.value}))}
-              className={errors.u_event_name ? 'error' : ''}
+              className={`form-input${errors.u_event_name ? ' input-error' : ''}`}
               placeholder="e.g., Community Clean-up Drive"
             />
-            {errors.u_event_name && <span className="error">{errors.u_event_name}</span>}
+            {errors.u_event_name && <span className="field-error">{errors.u_event_name}</span>}
           </div>
 
-          <div className="form-row">
-            <label>Description *</label>
+          <div className="form-field span-2">
+            <label className="form-label">Description <span className="req">*</span></label>
             <textarea
               value={form.u_description}
               onChange={e => setForm(prev => ({...prev, u_description: e.target.value}))}
-              className={errors.u_description ? 'error' : ''}
+              className={`form-input${errors.u_description ? ' input-error' : ''}`}
               placeholder="Describe the event and what volunteers will do..."
               rows="3"
             />
-            {errors.u_description && <span className="error">{errors.u_description}</span>}
+            {errors.u_description && <span className="field-error">{errors.u_description}</span>}
           </div>
 
-          <div className="form-row">
-            <label>Location *</label>
+          <div className="form-field span-2">
+            <label className="form-label">Location <span className="req">*</span></label>
             <input
               type="text"
               value={form.u_location}
               onChange={e => setForm(prev => ({...prev, u_location: e.target.value}))}
-              className={errors.u_location ? 'error' : ''}
+              className={`form-input${errors.u_location ? ' input-error' : ''}`}
               placeholder="e.g., Central Park, Downtown Community Center"
             />
-            {errors.u_location && <span className="error">{errors.u_location}</span>}
+            {errors.u_location && <span className="field-error">{errors.u_location}</span>}
           </div>
 
-          <div className="form-row">
-            <label>Event Date *</label>
+          <div className="form-field span-2">
+            <label className="form-label">Event Date <span className="req">*</span></label>
             <input
               type="date"
               value={form.u_event_date}
               onChange={e => setForm(prev => ({...prev, u_event_date: e.target.value}))}
-              className={errors.u_event_date ? 'error' : ''}
+              className={`form-input${errors.u_event_date ? ' input-error' : ''}`}
               min={new Date().toISOString().split('T')[0]}
             />
-            {errors.u_event_date && <span className="error">{errors.u_event_date}</span>}
+            {errors.u_event_date && <span className="field-error">{errors.u_event_date}</span>}
           </div>
 
-          <div className="form-row time-row">
-            <div className="time-input">
-              <label>Start Time *</label>
-              <input
-                type="time"
-                value={form.u_start_time}
-                onChange={e => setForm(prev => ({...prev, u_start_time: e.target.value}))}
-                className={errors.u_start_time ? 'error' : ''}
-              />
-              {errors.u_start_time && <span className="error">{errors.u_start_time}</span>}
-            </div>
-            <div className="time-input">
-              <label>End Time *</label>
-              <input
-                type="time"
-                value={form.u_end_time}
-                onChange={e => setForm(prev => ({...prev, u_end_time: e.target.value}))}
-                className={errors.u_end_time ? 'error' : ''}
-              />
-              {errors.u_end_time && <span className="error">{errors.u_end_time}</span>}
-            </div>
+          <div className="form-field">
+            <label className="form-label">Start Time <span className="req">*</span></label>
+            <input
+              type="time"
+              value={form.u_start_time}
+              onChange={e => setForm(prev => ({...prev, u_start_time: e.target.value}))}
+              className={`form-input${errors.u_start_time ? ' input-error' : ''}`}
+            />
+            {errors.u_start_time && <span className="field-error">{errors.u_start_time}</span>}
+          </div>
+          <div className="form-field">
+            <label className="form-label">End Time <span className="req">*</span></label>
+            <input
+              type="time"
+              value={form.u_end_time}
+              onChange={e => setForm(prev => ({...prev, u_end_time: e.target.value}))}
+              className={`form-input${errors.u_end_time ? ' input-error' : ''}`}
+            />
+            {errors.u_end_time && <span className="field-error">{errors.u_end_time}</span>}
           </div>
 
-          <div className="form-row">
-            <label>Required Skills</label>
+          <div className="form-field span-2">
+            <label className="form-label">Required Skills</label>
             <input
               type="text"
               value={form.u_required_skills}
               onChange={e => setForm(prev => ({...prev, u_required_skills: e.target.value}))}
+              className="form-input"
               placeholder="e.g., cleaning, organization, leadership (comma-separated)"
             />
           </div>
 
-          <div className="form-row">
-            <label>Max Participants</label>
+          <div className="form-field">
+            <label className="form-label">Max Participants</label>
             <input
               type="number"
               value={form.u_max_participants}
               onChange={e => setForm(prev => ({...prev, u_max_participants: e.target.value}))}
-              className={errors.u_max_participants ? 'error' : ''}
+              className={`form-input${errors.u_max_participants ? ' input-error' : ''}`}
               placeholder="Leave empty for unlimited"
               min="1"
             />
-            {errors.u_max_participants && <span className="error">{errors.u_max_participants}</span>}
+            {errors.u_max_participants && <span className="field-error">{errors.u_max_participants}</span>}
           </div>
 
-          <div className="form-row">
-            <label>Status</label>
+          <div className="form-field">
+            <label className="form-label">Status</label>
             <select
               value={form.u_status}
               onChange={e => setForm(prev => ({...prev, u_status: e.target.value}))}
+              className="form-input"
             >
               {STATUS_OPTIONS.map(status => (
                 <option key={status} value={status}>{STATUS_LABELS[status]}</option>
               ))}
             </select>
           </div>
-
-          <div className="modal-actions">
-            <button className="btn-secondary" onClick={() => { setModalOpen(false); resetForm() }}>
-              Cancel
-            </button>
-            <button className="btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : (editingEvent ? 'Update Event' : 'Create Event')}
-            </button>
-          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={() => { setModalOpen(false); resetForm() }}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : (editingEvent ? 'Update Event' : 'Create Event')}
+          </button>
         </div>
       </Modal>
     </div>

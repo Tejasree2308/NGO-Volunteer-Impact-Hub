@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import logoImg from './assets/image.png'
-import { authenticateUser } from './api/servicenow'
+import { authenticateUser, createVolunteer, getNotifications } from './api/servicenow'
 import Sidebar from './components/Sidebar'
+import SNStatusBanner from './components/SNStatusBanner'
 import Dashboard from './pages/Dashboard'
 import VolunteerDashboard from './pages/VolunteerDashboard'
 import VolunteersPage from './pages/VolunteersPage'
@@ -9,6 +10,7 @@ import ProjectsPage from './pages/ProjectsPage'
 import AssignmentsPage from './pages/AssignmentsPage'
 import EventsPage from './pages/EventsPage'
 import ReportsPage from './pages/ReportsPage'
+import NotificationsPage from './pages/NotificationsPage'
 import './App.css'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -60,8 +62,14 @@ const validatePassword = v => v.length >= 6
    LOGIN PAGE
    ═══════════════════════════════════════════════════════════════════════════ */
 function LoginPage({ onLogin }) {
+  const [authView, setAuthView] = useState('login') // 'login', 'signup', 'forgot'
+  
+  // Form state
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
+  const [name,     setName]     = useState('')
+  const [phone,    setPhone]    = useState('')
+  
   const [role,     setRole]     = useState('admin')
   const [roleAnim, setRoleAnim] = useState(false)
   const [showPwd,  setShowPwd]  = useState(false)
@@ -72,6 +80,7 @@ function LoginPage({ onLogin }) {
   const [toastVis, setToastVis] = useState(false)
 
   const snInstance = import.meta.env.VITE_SN_INSTANCE || 'ServiceNow PDI'
+  const today = new Date().toISOString().split('T')[0]
 
   function showToast(type, msg) {
     setToast({ type, msg })
@@ -90,10 +99,23 @@ function LoginPage({ onLogin }) {
 
   function validate() {
     const e = {}
-    if (!email.trim())                    e.email    = 'Username or email is required.'
-    else if (email.trim().length < 3)     e.email    = 'Minimum 3 characters required.'
-    if (!password)                        e.password = 'Password is required.'
-    else if (!validatePassword(password)) e.password = 'Minimum 6 characters required.'
+    if (authView === 'login') {
+      if (!email.trim())                    e.email    = 'Username or email is required.'
+      else if (email.trim().length < 3)     e.email    = 'Minimum 3 characters required.'
+      if (!password)                        e.password = 'Password is required.'
+      else if (!validatePassword(password)) e.password = 'Minimum 6 characters required.'
+    } else if (authView === 'signup') {
+      if (!name.trim()) e.name = 'Full Name is required.'
+      if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) e.email = 'Valid email is required.'
+      if (!password) e.password = 'Password is required.'
+      else if (!validatePassword(password)) e.password = 'Minimum 6 characters required.'
+      
+      // Only numbers, exactly 10 digits
+      if (!phone.trim()) e.phone = 'Phone number is required.'
+      else if (!/^\d{10}$/.test(phone.trim())) e.phone = 'Must be exactly 10 digits (numbers only).'
+    } else if (authView === 'forgot') {
+      if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) e.email = 'Valid email is required.'
+    }
     return e
   }
 
@@ -103,14 +125,37 @@ function LoginPage({ onLogin }) {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setErrors({})
     setLoading(true)
+
     try {
-      const user = await authenticateUser(email, password)
-      const authUser = { ...user, role }
-      if (remember) localStorage.setItem('ngo_session', JSON.stringify({ email, name: authUser.name, role: authUser.role }))
-      showToast('success', `Welcome back, ${authUser.name || 'Admin'}!`)
-      setTimeout(() => onLogin(authUser), 1000)
+      if (authView === 'login') {
+        const user = await authenticateUser(email, password)
+        // Enforce role: the selected role must match the account's actual role
+        if (user.role !== role) {
+          throw new Error(
+            role === 'admin'
+              ? 'This account is a Volunteer account. Please select "Volunteer" to log in.'
+              : 'This account is an Admin account. Please select "Admin" to log in.'
+          )
+        }
+        if (remember) localStorage.setItem('ngo_session', JSON.stringify({ email, name: user.name, role: user.role }))
+        showToast('success', `Welcome back, ${user.name || 'User'}!`)
+        setTimeout(() => onLogin(user), 1000)
+      } else if (authView === 'signup') {
+        await createVolunteer({
+          name,
+          email,
+          user_password: password,
+          mobile_phone: phone,
+        })
+        showToast('success', 'Registration successful! Please log in.')
+        setAuthView('login')
+        setPassword('')
+      } else if (authView === 'forgot') {
+        showToast('success', 'Password reset link sent to your email!')
+        setAuthView('login')
+      }
     } catch (err) {
-      showToast('error', err.message || 'Login failed. Please check credentials.')
+      showToast('error', err.message || 'Operation failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -127,7 +172,7 @@ function LoginPage({ onLogin }) {
       </div>
 
       <main className="login-wrapper">
-        <div className={`login-card${roleAnim ? ' role-switched' : ''}`} role="main">
+        <div className={`login-card${roleAnim ? ' role-switched' : ''}`} role="main" style={{ maxHeight: authView === 'signup' ? '95vh' : undefined, overflowY: authView === 'signup' ? 'auto' : undefined }}>
           {/* Logo */}
           <div className="login-logo">
             <img src={logoImg} alt="NGO Impact Hub" className="logo-img"/>
@@ -136,21 +181,27 @@ function LoginPage({ onLogin }) {
           {/* Heading */}
           <div className="login-heading">
             <h1>NGO <span>Impact Hub</span></h1>
-            <p>Sign in to access your {role === 'admin' ? 'admin portal' : 'volunteer dashboard'}</p>
+            <p>
+              {authView === 'login' ? `Sign in to access your ${role === 'admin' ? 'admin portal' : 'volunteer dashboard'}`
+              : authView === 'signup' ? 'Register as a new volunteer'
+              : 'Reset your password'}
+            </p>
           </div>
 
-          <div className="login-role-switcher" role="tablist" aria-label="Login user role">
-            <button type="button"
-              className={`role-btn${role === 'admin' ? ' active' : ''}`}
-              onClick={() => { if (role !== 'admin') { setRole('admin'); setRoleAnim(true) } }}
-              aria-selected={role === 'admin'}
-            >Admin</button>
-            <button type="button"
-              className={`role-btn${role === 'volunteer' ? ' active' : ''}`}
-              onClick={() => { if (role !== 'volunteer') { setRole('volunteer'); setRoleAnim(true) } }}
-              aria-selected={role === 'volunteer'}
-            >Volunteer</button>
-          </div>
+          {authView === 'login' && (
+            <div className="login-role-switcher" role="tablist" aria-label="Login user role">
+              <button type="button"
+                className={`role-btn${role === 'admin' ? ' active' : ''}`}
+                onClick={() => { if (role !== 'admin') { setRole('admin'); setRoleAnim(true) } }}
+                aria-selected={role === 'admin'}
+              >Admin</button>
+              <button type="button"
+                className={`role-btn${role === 'volunteer' ? ' active' : ''}`}
+                onClick={() => { if (role !== 'volunteer') { setRole('volunteer'); setRoleAnim(true) } }}
+                aria-selected={role === 'volunteer'}
+              >Volunteer</button>
+            </div>
+          )}
 
           {/* ServiceNow connection banner */}
           <div className="sn-connect-banner">
@@ -159,72 +210,149 @@ function LoginPage({ onLogin }) {
           </div>
 
           {/* Form */}
-          <form id="login-form" className="login-form" onSubmit={handleSubmit} noValidate aria-label="Login form">
-            {/* Username / Email */}
+          <form id="login-form" className="login-form" onSubmit={handleSubmit} noValidate aria-label={`${authView} form`}>
+            
+            {authView === 'signup' && (
+              <div className="field-group">
+                <label className="field-label" htmlFor="name-input">Full Name</label>
+                <div className="field-wrap">
+                  <input id="name-input" type="text"
+                    className={`field-input${errors.name ? ' error' : ''}`}
+                    placeholder="e.g. Priya Sharma"
+                    value={name} onChange={e => { setName(e.target.value); setErrors(p => ({...p, name: ''})) }}
+                  />
+                </div>
+                {errors.name && <span className="error-msg" role="alert">⚠ {errors.name}</span>}
+              </div>
+            )}
+
             <div className="field-group">
-              <label className="field-label" htmlFor="email-input">Username or Email</label>
+              <label className="field-label" htmlFor="email-input">Email {authView === 'login' && role === 'admin' ? 'or Username' : ''}</label>
               <div className="field-wrap">
                 <span className="field-icon"><IconMail/></span>
                 <input id="email-input" type="text"
                   className={`field-input${errors.email ? ' error' : ''}`}
-                  placeholder={role === 'admin' ? 'admin or admin@ngo.org' : 'volunteer@ngo.org'}
+                  placeholder={authView === 'login' && role === 'admin' ? 'admin or admin@ngo.org' : 'volunteer@ngo.org'}
                   value={email}
-                  onChange={e => { setEmail(e.target.value); setErrors(p => ({...p, email: ''})) }}
+                  onChange={e => { 
+                    const val = e.target.value;
+                    setEmail(val);
+                    if (/\s/.test(val)) {
+                      setErrors(p => ({...p, email: 'Spaces are not allowed in email or username.'}));
+                    } else {
+                      setErrors(p => ({...p, email: ''}));
+                    }
+                  }}
+                  onBlur={e => {
+                    if (authView !== 'login' && email && !/\S+@\S+\.\S+/.test(email)) {
+                      setErrors(p => ({...p, email: 'Invalid email format. Example: user@example.com'}));
+                    }
+                  }}
                   autoComplete="username"
-                  aria-describedby={errors.email ? 'email-error' : undefined}
-                  aria-invalid={!!errors.email}
                 />
               </div>
-              {errors.email && <span id="email-error" className="error-msg" role="alert">⚠ {errors.email}</span>}
+              {errors.email && <span className="error-msg" role="alert">⚠ {errors.email}</span>}
             </div>
 
-            {/* Password */}
-            <div className="field-group">
-              <label className="field-label" htmlFor="password-input">Password</label>
-              <div className="field-wrap">
-                <span className="field-icon"><IconLock/></span>
-                <input id="password-input"
-                  type={showPwd ? 'text' : 'password'}
-                  className={`field-input${errors.password ? ' error' : ''}`}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => { setPassword(e.target.value); setErrors(p => ({...p, password: ''})) }}
-                  autoComplete="current-password"
-                  aria-describedby={errors.password ? 'password-error' : undefined}
-                  aria-invalid={!!errors.password}
-                />
-                <button type="button" className="toggle-btn"
-                  onClick={() => setShowPwd(v => !v)}
-                  aria-label={showPwd ? 'Hide password' : 'Show password'}>
-                  {showPwd ? <IconEyeOff/> : <IconEye/>}
-                </button>
+            {authView !== 'forgot' && (
+              <div className="field-group">
+                <label className="field-label" htmlFor="password-input">Password</label>
+                <div className="field-wrap">
+                  <span className="field-icon"><IconLock/></span>
+                  <input id="password-input"
+                    type={showPwd ? 'text' : 'password'}
+                    className={`field-input${errors.password ? ' error' : ''}`}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setErrors(p => ({...p, password: ''})) }}
+                    onBlur={e => {
+                      if (password && password.length < 6) {
+                        setErrors(p => ({...p, password: 'Password must be at least 6 characters.'}));
+                      }
+                    }}
+                    autoComplete={authView === 'signup' ? 'new-password' : 'current-password'}
+                  />
+                  <button type="button" className="toggle-btn"
+                    onClick={() => setShowPwd(v => !v)}
+                    aria-label={showPwd ? 'Hide password' : 'Show password'}>
+                    {showPwd ? <IconEyeOff/> : <IconEye/>}
+                  </button>
+                </div>
+                {errors.password && <span className="error-msg" role="alert">⚠ {errors.password}</span>}
               </div>
-              {errors.password && <span id="password-error" className="error-msg" role="alert">⚠ {errors.password}</span>}
-            </div>
+            )}
 
-            {/* Remember / Forgot */}
-            <div className="form-extras">
-              <label className="remember-label" htmlFor="remember-me">
-                <input id="remember-me" type="checkbox" className="remember-checkbox"
-                  checked={remember} onChange={e => setRemember(e.target.checked)}/>
-                Remember me
-              </label>
-              <a href="#" className="forgot-link"
-                onClick={e => { e.preventDefault(); showToast('info', 'Contact your ServiceNow admin to reset your password.') }}>
-                Forgot password?
-              </a>
-            </div>
+            {authView === 'signup' && (
+              <div className="field-group">
+                <label className="field-label" htmlFor="phone-input">Phone Number (10 digits)</label>
+                <div className="field-wrap">
+                  <input id="phone-input" type="text"
+                    className={`field-input${errors.phone ? ' error' : ''}`}
+                    placeholder="9876543210"
+                    value={phone}
+                    onChange={e => {
+                      const raw = e.target.value;
+                      if (/[^\d]/.test(raw)) {
+                        setErrors(p => ({...p, phone: 'Warning: Please enter numbers only.'}));
+                      } else {
+                        setErrors(p => ({...p, phone: ''}));
+                      }
+                      setPhone(raw.replace(/\D/g, '').slice(0, 10));
+                    }}
+                    onBlur={e => {
+                      if (phone && phone.length < 10) {
+                        setErrors(p => ({...p, phone: 'Phone number must be exactly 10 digits.'}));
+                      }
+                    }}
+                  />
+                </div>
+                {errors.phone && <span className="error-msg" role="alert">⚠ {errors.phone}</span>}
+              </div>
+            )}
 
-            {/* Submit */}
+            {authView === 'login' && (
+              <div className="form-extras">
+                <label className="remember-label" htmlFor="remember-me">
+                  <input id="remember-me" type="checkbox" className="remember-checkbox"
+                    checked={remember} onChange={e => setRemember(e.target.checked)}/>
+                  Remember me
+                </label>
+                <a href="#" className="forgot-link"
+                  onClick={e => { e.preventDefault(); setAuthView('forgot'); setErrors({}) }}>
+                  Forgot password?
+                </a>
+              </div>
+            )}
+
             <button id="login-submit-btn" type="submit" className="btn-submit"
-              disabled={loading} aria-busy={loading}>
+              disabled={loading} aria-busy={loading} style={{ marginTop: '1rem' }}>
               {loading && <span className="spinner" aria-hidden="true"/>}
-              {loading ? 'Authenticating with ServiceNow…' : `Sign In as ${role === 'admin' ? 'Admin' : 'Volunteer'}`}
+              {loading ? 'Processing…' 
+                : authView === 'login' ? `Sign In as ${role === 'admin' ? 'Admin' : 'Volunteer'}`
+                : authView === 'signup' ? 'Create Account'
+                : 'Send Reset Link'}
             </button>
+
+            {authView === 'login' && role === 'volunteer' && (
+              <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-light)' }}>Don't have an account? </span>
+                <a href="#" style={{ color: 'var(--brand-green)', fontWeight: 500, textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); setAuthView('signup'); setErrors({}) }}>
+                  Sign Up
+                </a>
+              </div>
+            )}
+
+            {authView !== 'login' && (
+              <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.9rem' }}>
+                <a href="#" style={{ color: 'var(--brand-green)', fontWeight: 500, textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); setAuthView('login'); setErrors({}) }}>
+                  &larr; Back to Login
+                </a>
+              </div>
+            )}
           </form>
 
           {/* Demo hint */}
-          <div className="demo-hint">
+          <div className="demo-hint" style={{ marginTop: '1.5rem' }}>
             <span>🧪 Demo mode:</span> Use <strong>{role === 'admin' ? 'admin@ngo.org' : 'volunteer@ngo.org'}</strong> / <strong>{role === 'admin' ? 'admin456' : 'volunteer123'}</strong>
           </div>
 
@@ -256,13 +384,22 @@ function LoginPage({ onLogin }) {
    ═══════════════════════════════════════════════════════════════════════════ */
 function Portal({ user, onLogout }) {
   const [page, setPage] = useState('dashboard')
+  const [notifCount, setNotifCount] = useState(0)
 
   const isAdmin = user.role === 'admin'
 
+  useEffect(() => {
+    if (!user.sys_id) return
+    getNotifications(user.sys_id)
+      .then(notifs => setNotifCount(notifs.filter(n => !n.u_is_read).length))
+      .catch(() => {})
+  }, [user.sys_id])
+
   const pages = {
-    dashboard: isAdmin ? <Dashboard /> : <VolunteerDashboard user={user} />,
-    volunteers: <VolunteersPage />,
+    dashboard:     isAdmin ? <Dashboard /> : <VolunteerDashboard user={user} />,
+    notifications: <NotificationsPage user={user} onRead={() => setNotifCount(c => Math.max(0, c - 1))} />,
     ...(isAdmin ? {
+      volunteers:  <VolunteersPage />,
       projects:    <ProjectsPage />,
       assignments: <AssignmentsPage />,
       events:      <EventsPage />,
@@ -278,8 +415,10 @@ function Portal({ user, onLogout }) {
         onLogout={onLogout}
         user={user}
         isAdmin={isAdmin}
+        notifCount={notifCount}
       />
       <main className="portal-content">
+        <SNStatusBanner />
         {pages[page] || (isAdmin ? <Dashboard /> : <VolunteerDashboard user={user} />)}
       </main>
     </div>

@@ -2,15 +2,16 @@ import React from 'react'
 import './sidebar.css'
 
 const NAV_ITEMS = [
-  { id: 'dashboard',   label: 'Dashboard',    icon: <IconGrid /> },
-  { id: 'volunteers',  label: 'Volunteers',   icon: <IconUsers /> },
-  { id: 'projects',    label: 'Projects',     icon: <IconBriefcase /> },
-  { id: 'assignments', label: 'Assignments',  icon: <IconLink /> },
-  { id: 'events',      label: 'Events',       icon: <IconCalendar /> },
-  { id: 'reports',     label: 'Impact Reports', icon: <IconChart /> },
+  { id: 'dashboard',     label: 'Dashboard',      icon: <IconGrid />,     adminOnly: false },
+  { id: 'volunteers',    label: 'Volunteers',     icon: <IconUsers />,    adminOnly: true },
+  { id: 'projects',      label: 'Projects',       icon: <IconBriefcase />,adminOnly: true },
+  { id: 'assignments',   label: 'Assignments',    icon: <IconLink />,     adminOnly: true },
+  { id: 'events',        label: 'Events',         icon: <IconCalendar />, adminOnly: true },
+  { id: 'reports',       label: 'Impact Reports', icon: <IconChart />,    adminOnly: true },
+  { id: 'notifications', label: 'Notifications',  icon: <IconBell />,     adminOnly: false },
 ]
 
-export default function Sidebar({ activePage, onNavigate, onLogout, user, isAdmin }) {
+export default function Sidebar({ activePage, onNavigate, onLogout, user, isAdmin, notifCount = 0 }) {
   return (
     <aside className="sidebar">
       {/* Brand */}
@@ -48,15 +49,24 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user, isAdmi
 
       {/* Nav */}
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {NAV_ITEMS.filter(item => item.id === 'dashboard' || item.id === 'volunteers' || isAdmin).map(item => (
+        {NAV_ITEMS.filter(item => !item.adminOnly || isAdmin).map(item => (
           <button
             key={item.id}
             className={`nav-item${activePage === item.id ? ' active' : ''}`}
             onClick={() => onNavigate(item.id)}
             aria-current={activePage === item.id ? 'page' : undefined}
+            style={{ position: 'relative' }}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-label">{item.label}</span>
+            {item.id === 'notifications' && notifCount > 0 && (
+              <span style={{
+                position: 'absolute', top: '6px', right: '10px',
+                background: '#EF4444', color: '#fff', borderRadius: '99px',
+                fontSize: '0.65rem', fontWeight: 700, minWidth: '16px', height: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+              }}>{notifCount > 9 ? '9+' : notifCount}</span>
+            )}
             {activePage === item.id && <span className="nav-indicator" aria-hidden="true"/>}
           </button>
         ))}
@@ -131,6 +141,14 @@ function IconChart() {
       <line x1="12" y1="20" x2="12" y2="4"/>
       <line x1="6" y1="20" x2="6" y2="14"/>
       <line x1="2" y1="20" x2="22" y2="20"/>
+    </svg>
+  )
+}
+function IconBell() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
   )
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getImpactReports, createImpactReport, getProjects } from '../api/servicenow'
+import { getImpactReports, createImpactReport, deleteImpactReport, getProjects } from '../api/servicenow'
 import Modal from '../components/Modal'
 import './Pages.css'
 
@@ -10,8 +10,10 @@ export default function ReportsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving]       = useState(false)
   const [toast, setToast]         = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const [form, setForm] = useState({ u_project: '', u_volunteers_involved: '', u_total_hours: '', u_beneficiaries_reached: '', u_outcome_summary: '' })
   const [errors, setErrors] = useState({})
+  const [chartTab, setChartTab] = useState('beneficiaries')
 
   useEffect(() => { loadAll() }, [])
 
@@ -37,6 +39,20 @@ export default function ReportsPage() {
     if (!form.u_total_hours) e.u_total_hours = 'Required'
     if (!form.u_beneficiaries_reached) e.u_beneficiaries_reached = 'Required'
     return e
+  }
+
+  async function handleDelete(r) {
+    if (!confirm(`Delete this impact report for "${r.u_project}"? This cannot be undone.`)) return
+    setDeletingId(r.sys_id)
+    try {
+      await deleteImpactReport(r.sys_id)
+      setReports(prev => prev.filter(x => x.sys_id !== r.sys_id))
+      showToast('success', 'Impact report deleted.')
+    } catch (e) {
+      showToast('error', e.message)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   async function handleSave() {
@@ -65,6 +81,8 @@ export default function ReportsPage() {
   }), { volunteers: 0, hours: 0, beneficiaries: 0 })
 
   const maxBenef = Math.max(...reports.map(r => parseInt(r.u_beneficiaries_reached) || 0), 1)
+  const maxHours = Math.max(...reports.map(r => parseInt(r.u_total_hours) || 0), 1)
+  const maxVols  = Math.max(...reports.map(r => parseInt(r.u_volunteers_involved) || 0), 1)
 
   return (
     <div className="page-wrapper">
@@ -105,20 +123,45 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Impact Bar Chart */}
+      {/* Impact Bar Charts — tabbed */}
       {!loading && reports.length > 0 && (
         <div className="impact-chart-card">
-          <h2 className="chart-title">Beneficiaries Reached by Project</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 className="chart-title" style={{ margin: 0 }}>Impact by Project</h2>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+                { key: 'beneficiaries', label: '🌍 Beneficiaries' },
+                { key: 'hours',         label: '⏱️ Hours' },
+                { key: 'volunteers',    label: '👥 Volunteers' },
+              ].map(tab => (
+                <button key={tab.key}
+                  onClick={() => setChartTab(tab.key)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 8, border: '1px solid',
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    background: chartTab === tab.key ? '#10b981' : '#f8fafc',
+                    color:      chartTab === tab.key ? '#fff'    : '#475569',
+                    borderColor: chartTab === tab.key ? '#059669' : '#e2e8f0',
+                  }}
+                >{tab.label}</button>
+              ))}
+            </div>
+          </div>
           <div className="bar-chart">
             {reports.map((r, i) => {
-              const pct = Math.round((parseInt(r.u_beneficiaries_reached) || 0) / maxBenef * 100)
               const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444']
+              const color = colors[i % colors.length]
+              let raw, maxVal, label
+              if (chartTab === 'beneficiaries') { raw = parseInt(r.u_beneficiaries_reached) || 0; maxVal = maxBenef; label = raw.toLocaleString() }
+              else if (chartTab === 'hours')    { raw = parseInt(r.u_total_hours) || 0;          maxVal = maxHours; label = `${raw}h` }
+              else                              { raw = parseInt(r.u_volunteers_involved) || 0;   maxVal = maxVols;  label = raw }
+              const pct = Math.round(raw / maxVal * 100)
               return (
                 <div key={r.sys_id} className="bar-row">
                   <div className="bar-label">{r.u_project}</div>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${pct}%`, background: colors[i % colors.length] }}>
-                      <span className="bar-val">{parseInt(r.u_beneficiaries_reached).toLocaleString()}</span>
+                    <div className="bar-fill" style={{ width: `${pct}%`, background: color }}>
+                      <span className="bar-val">{label}</span>
                     </div>
                   </div>
                 </div>
@@ -152,7 +195,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="rm-sep"/>
                 <div className="rm-item">
-                  <span className="rm-val">{parseInt(r.u_beneficiaries_reached).toLocaleString()}</span>
+                  <span className="rm-val">{(parseInt(r.u_beneficiaries_reached) || 0).toLocaleString()}</span>
                   <span className="rm-key">Beneficiaries</span>
                 </div>
               </div>
@@ -168,7 +211,15 @@ export default function ReportsPage() {
                   a.href = url; a.download = `impact-report-${r.sys_id?.slice(-6) || i}.txt`
                   a.click()
                 }}>
-                  📄 Export Report
+                  📄 Export
+                </button>
+                <button className="btn-icon danger" title="Delete report"
+                  disabled={deletingId === r.sys_id}
+                  onClick={() => handleDelete(r)}
+                  style={{marginLeft: 6}}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
                 </button>
               </div>
             </div>

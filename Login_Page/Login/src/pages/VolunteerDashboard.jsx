@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getVolunteers, updateVolunteer, getAssignments, getProjects, getAvailableEvents, registerForEvent, getEventRegistrations } from '../api/servicenow'
+import { getVolunteers, updateVolunteer, getAssignments, getProjects, getAvailableEvents, registerForEvent, getEventRegistrations, updateAssignmentHours } from '../api/servicenow'
 import './Dashboard.css'
 
 const SKILLS_OPTIONS = ['Teaching', 'First Aid', 'IT Support', 'Data Entry', 'Healthcare', 'Counseling', 'Environmental', 'Planting', 'Social Work', 'Community', 'Legal Aid', 'Advocacy']
@@ -17,6 +17,8 @@ export default function VolunteerDashboard({ user }) {
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({ name: user.name || '', email: user.email || '', mobile_phone: '', u_skills: '', u_availability: 'weekends', u_address: '' })
   const [errors, setErrors] = useState({})
+  const [hoursEdits, setHoursEdits] = useState({}) // { [sys_id]: hoursValue }
+  const [savingHours, setSavingHours] = useState({}) // { [sys_id]: bool }
 
   useEffect(() => {
     async function load() {
@@ -29,7 +31,7 @@ export default function VolunteerDashboard({ user }) {
           getAvailableEvents(user.sys_id),
           getEventRegistrations(user.sys_id)
         ])
-        setVolunteers(v.slice(0, 10))
+        setVolunteers(v)
         setAssignments(a)
         setProjects(p)
         setAvailableEvents(events)
@@ -69,6 +71,42 @@ export default function VolunteerDashboard({ user }) {
     return e
   }
 
+  async function handleSave() {
+    const errs = validateForm()
+    if (Object.keys(errs).length) { setErrors(errs); return }
+    setSaving(true)
+    try {
+      const myRecord = volunteers.find(v => v.email === user.email)
+      if (!myRecord) {
+        showToast('error', 'Volunteer record not found. Please contact your coordinator.')
+        return
+      }
+      await updateVolunteer(myRecord.sys_id, form)
+      showToast('success', 'Profile updated successfully!')
+      setEditing(false)
+    } catch (err) {
+      showToast('error', err.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleLogHours(assignmentSysId, hours) {
+    setSavingHours(prev => ({ ...prev, [assignmentSysId]: true }))
+    try {
+      await updateAssignmentHours(assignmentSysId, hours)
+      setAssignments(prev => prev.map(a =>
+        a.sys_id === assignmentSysId ? { ...a, u_hours_worked: String(hours) } : a
+      ))
+      setHoursEdits(prev => ({ ...prev, [assignmentSysId]: undefined }))
+      showToast('success', 'Hours logged successfully!')
+    } catch (err) {
+      showToast('error', err.message || 'Failed to log hours')
+    } finally {
+      setSavingHours(prev => ({ ...prev, [assignmentSysId]: false }))
+    }
+  }
+
   async function handleRegisterForEvent(eventId) {
     try {
       await registerForEvent(user.sys_id, eventId)
@@ -89,9 +127,12 @@ export default function VolunteerDashboard({ user }) {
 
   // Find my volunteer record
   const myRecord = volunteers.find(v => v.email === user.email)
-  const myAssignments = assignments.filter(a => a.volunteer === myRecord?.sys_id)
-  const myProjectIds = [...new Set(myAssignments.map(a => a.project))]
-  const myProjects = projects.filter(p => myProjectIds.includes(p.sys_id))
+  const myAssignments = assignments.filter(a =>
+    a.u_volunteer === myRecord?.sys_id ||
+    (myRecord && (a.u_volunteer || '').toLowerCase().includes((myRecord.name || '').toLowerCase()))
+  )
+  const myProjectIds = [...new Set(myAssignments.map(a => a.u_project).filter(Boolean))]
+  const myProjects = projects.filter(p => myProjectIds.includes(p.sys_id) || myProjectIds.some(id => p.u_project_name === id))
 
   return (
     <div className="page-wrapper">
@@ -214,17 +255,40 @@ export default function VolunteerDashboard({ user }) {
             <p>Your current volunteer assignments</p>
           </div>
           <div className="assignments-list">
-            {myAssignments.length > 0 ? myAssignments.slice(0, 5).map(a => (
-              <div key={a.sys_id} className="assignment-item">
-                <div className="assignment-info">
-                  <span className="assignment-project">{projects.find(p => p.sys_id === a.project)?.u_project_name || 'Unknown Project'}</span>
-                  <span className="assignment-status">Status: {a.completion_status || 'Active'}</span>
+            {myAssignments.length > 0 ? myAssignments.slice(0, 5).map(a => {
+              const currentHours = hoursEdits[a.sys_id] !== undefined ? hoursEdits[a.sys_id] : (a.u_hours_worked || '0')
+              const projectName = projects.find(p => p.sys_id === a.u_project || p.u_project_name === a.u_project)?.u_project_name || a.u_project || 'Unknown Project'
+              return (
+                <div key={a.sys_id} className="assignment-item" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <div className="assignment-info">
+                      <span className="assignment-project">{projectName}</span>
+                      <span className="assignment-status">Status: {a.u_completion_status || 'Active'}</span>
+                    </div>
+                    <span className="badge badge-blue" style={{ alignSelf: 'center' }}>{a.u_hours_worked || 0}h logged</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="9999"
+                      value={currentHours}
+                      onChange={e => setHoursEdits(prev => ({ ...prev, [a.sys_id]: e.target.value }))}
+                      style={{ width: '80px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '0.85rem' }}
+                      placeholder="Hours"
+                    />
+                    <button
+                      className="btn-primary"
+                      style={{ padding: '4px 14px', fontSize: '0.78rem', borderRadius: '6px' }}
+                      disabled={savingHours[a.sys_id] || currentHours === (a.u_hours_worked || '0')}
+                      onClick={() => handleLogHours(a.sys_id, currentHours)}
+                    >
+                      {savingHours[a.sys_id] ? 'Saving…' : 'Log Hours'}
+                    </button>
+                  </div>
                 </div>
-                <div className="assignment-hours">
-                  {a.hours_worked || 0} hours
-                </div>
-              </div>
-            )) : <p>No assignments yet.</p>}
+              )
+            }) : <p>No assignments yet.</p>}
           </div>
         </div>
 
@@ -302,10 +366,21 @@ export default function VolunteerDashboard({ user }) {
 function LoadingState() {
   return (
     <div className="page-wrapper">
-      <div className="loading-spinner">
-        <div className="spinner"/>
-        <p>Loading dashboard...</p>
+      <div className="page-header">
+        <div>
+          <div className="skel skel-title"/>
+          <div className="skel skel-sub"/>
+        </div>
       </div>
+      <div className="dashboard-grid">
+        {[...Array(4)].map((_, i) => <div key={i} className="skel skel-stat"/>)}
+        <div className="skel skel-card"/>
+      </div>
+      <div className="dashboard-grid secondary" style={{ marginTop: 24 }}>
+        <div className="skel skel-card"/>
+        <div className="skel skel-card"/>
+      </div>
+      <div className="skel skel-card" style={{ marginTop: 24 }}/>
     </div>
   )
 }
